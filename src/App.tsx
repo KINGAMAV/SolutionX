@@ -20,6 +20,11 @@ import { ProfileScreen } from './screens/ProfileScreen';
 import { AlertsScreen } from './screens/AlertsScreen';
 import { ParcelDeliveryScreen } from './screens/ParcelDeliveryScreen';
 import { BookingScreen } from './screens/BookingScreen';
+import { AdminDashboard } from './screens/admin/AdminDashboard';
+import { BoutiqueDashboard } from './screens/boutique/BoutiqueDashboard';
+import { LivreurDashboard } from './screens/livreur/LivreurDashboard';
+import { ArtisanDashboard } from './screens/artisan/ArtisanDashboard';
+import { UserRole } from './types';
 
 const LoadingScreen = () => (
   <div className="min-h-screen flex items-center justify-center bg-brand-background text-brand-primary">
@@ -27,16 +32,32 @@ const LoadingScreen = () => (
   </div>
 );
 
-const RequireAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const getRoleHomeRoute = (role?: string) => {
+  switch (role) {
+    case 'admin':
+    case 'agent':
+      return '/admin';
+    case 'boutique':
+      return '/boutique';
+    case 'livreur':
+      return '/livreur';
+    case 'artisan':
+      return '/artisan';
+    case 'client':
+    default:
+      return '/';
+  }
+};
+
+const RequireRole: React.FC<{ children: React.ReactNode; allowedRoles: UserRole[] }> = ({ children, allowedRoles }) => {
   const { state } = useApp();
   const location = useLocation();
 
-  if (!state.authChecked) {
-    return <LoadingScreen />;
-  }
-
-  if (!state.user) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+  if (!state.authChecked) return <LoadingScreen />;
+  if (!state.user) return <Navigate to="/login" state={{ from: location }} replace />;
+  
+  if (!allowedRoles.includes(state.user.role)) {
+    return <Navigate to={getRoleHomeRoute(state.user.role)} replace />;
   }
 
   return <>{children}</>;
@@ -45,12 +66,10 @@ const RequireAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 const RedirectIfAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { state } = useApp();
 
-  if (!state.authChecked) {
-    return <LoadingScreen />;
-  }
+  if (!state.authChecked) return <LoadingScreen />;
 
   if (state.user) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={getRoleHomeRoute(state.user.role)} replace />;
   }
 
   return <>{children}</>;
@@ -64,7 +83,8 @@ export default function App() {
           <Route path="/welcome" element={<LandingScreen />} />
           <Route path="/login" element={<RedirectIfAuth><LoginScreen /></RedirectIfAuth>} />
           
-          <Route element={<RequireAuth><Layout /></RequireAuth>}>
+          {/* Routes Client */}
+          <Route element={<RequireRole allowedRoles={['client']}><Layout /></RequireRole>}>
             <Route path="/" element={<HomeScreen />} />
             <Route path="/services" element={<Navigate to="/" replace />} />
             <Route path="/services/artisans" element={<ArtisansScreen />} />
@@ -79,6 +99,12 @@ export default function App() {
             <Route path="/alerts" element={<AlertsScreen />} />
             <Route path="/profile" element={<ProfileScreen />} />
           </Route>
+
+          {/* Placeholders pour les autres rôles - à implémenter dans les prochaines phases */}
+          <Route path="/admin/*" element={<RequireRole allowedRoles={['admin', 'agent']}><AdminDashboard /></RequireRole>} />
+          <Route path="/boutique/*" element={<RequireRole allowedRoles={['boutique']}><BoutiqueDashboard /></RequireRole>} />
+          <Route path="/livreur/*" element={<RequireRole allowedRoles={['livreur']}><LivreurDashboard /></RequireRole>} />
+          <Route path="/artisan/*" element={<RequireRole allowedRoles={['artisan']}><ArtisanDashboard /></RequireRole>} />
 
           <Route path="*" element={<Navigate to="/welcome" replace />} />
         </Routes>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { User, Home, Lock, Eye, CheckCircle2 } from 'lucide-react';
+import { User, Home, Lock, Eye, CheckCircle2, Shield, Bike, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { supabase } from '../lib/supabase';
@@ -19,19 +19,6 @@ export const LoginScreen: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const createUserProfile = (authUser: any) => {
-    const metadata = authUser.user_metadata || {};
-    return {
-      id: authUser.id,
-      name: metadata.name || authUser.email?.split('@')[0] || 'Utilisateur',
-      email: authUser.email || '',
-      houseNumber: metadata.houseNumber || '',
-      avatar:
-        metadata.avatar ||
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuAgGuMREuc2sBVsLkVQZ0N0VxnF2YJZXQfbTOE7j5GGHVoadnlOTqO58GwMpUnBC9yq6ABwjfGPBzmpBzHJr_NRK-UknmQAJ1GjaHvtxgqs7HONsP7ojPsYGeOXhQzmEwF2AB8dM8CWgg_qgyzrp1r7PyJQJRjwDBokgXV60uUX88o6jVGZTed2wF-Z4cGXMYvBgEE1AK9orkYSODC3inRRqegq5tTbkQQU-2j5AN_yAgXqR4d2_7pj50a0sJXWHrDZK5W2kMCWtHL3',
-    };
-  };
-
   const handleSubmit = async () => {
     setError('');
     setLoading(true);
@@ -43,7 +30,7 @@ export const LoginScreen: React.FC = () => {
     }
 
     if (mode === 'login') {
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
+      const { error: authError } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password,
       });
@@ -53,13 +40,8 @@ export const LoginScreen: React.FC = () => {
         setLoading(false);
         return;
       }
-
-      if (data.user) {
-        dispatch({ type: 'SET_USER', payload: createUserProfile(data.user) });
-        navigate('/');
-      }
     } else {
-      const { data, error: authError } = await supabase.auth.signUp({
+      const { error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
@@ -76,15 +58,50 @@ export const LoginScreen: React.FC = () => {
         return;
       }
 
-      if (data.user) {
-        dispatch({ type: 'SET_USER', payload: createUserProfile(data.user) });
-        navigate('/');
-      } else {
-        setError('Inscription réussie. Vérifiez votre email si nécessaire.');
-      }
+      setError('Inscription réussie. (Acceptez l\'email si la validation est activée dans Supabase)');
     }
 
     setLoading(false);
+  };
+
+  // BYPASS DÉMO POUR TESTER SANS SUPABASE AUTH INSTANTANÉMENT !
+  const handleDemoLogin = (role: 'admin' | 'livreur' | 'client') => {
+    let demoUser;
+    if (role === 'admin') {
+      demoUser = {
+        id: 'u3',
+        name: 'Admin Global',
+        email: 'admin@example.com',
+        houseNumber: 'HQ',
+        role: 'admin' as const
+      };
+    } else if (role === 'livreur') {
+      demoUser = {
+        id: 'u5',
+        name: 'Moussa Livreur',
+        email: 'livreur@example.com',
+        houseNumber: 'Cocody',
+        role: 'livreur' as const,
+        avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCP5WWIGcnMzAqHjkVs78766LybBNTgzYfuy2ypdWigqLRvNeryJj7Wi_6v9RciTgLg2whU9lgg2sri2D4Hizh_650HyCIwKqQkpH-IoXZakbHCQv1Nn_zvR86KhC_pQULscsn0Z3iUp2hKgCKWpXjL_YJjunPm6QqWeepHcBHsM0dJDU4g05vJDUGd10v7HYBXHbTk4NoqiBR3j8V6z-LH8qpitBlcEFOqhsVTeQpPFjTXnkV9OnGmhOgpVEjCDE8r7ZncVfxHhrtj'
+      };
+    } else {
+      demoUser = {
+        id: 'u1',
+        name: 'Jean-Marc',
+        email: 'jeanmarc@example.com',
+        houseNumber: 'Villa 124',
+        role: 'client' as const,
+        avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAgGuMREuc2sBVsLkVQZ0N0VxnF2YJZXQfbTOE7j5GGHVoadnlOTqO58GwMpUnBC9yq6ABwjfGPBzmpBzHJr_NRK-UknmQAJ1GjaHvtxgqs7HONsP7ojPsYGeOXhQzmEwF2AB8dM8CWgg_qgyzrp1r7PyJQJRjwDBokgXV60uUX88o6jVGZTed2wF-Z4cGXMYvBgEE1AK9orkYSODC3inRRqegq5tTbkQQU-2j5AN_yAgXqR4d2_7pj50a0sJXWHrDZK5W2kMCWtHL3'
+      };
+    }
+    
+    dispatch({ type: 'SET_USER', payload: demoUser });
+    dispatch({ type: 'SET_AUTH_CHECKED', payload: true });
+    
+    // Redirection directe
+    if (role === 'admin') navigate('/admin');
+    else if (role === 'livreur') navigate('/livreur');
+    else navigate('/');
   };
 
   return (
@@ -113,7 +130,7 @@ export const LoginScreen: React.FC = () => {
       <motion.main 
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="w-full max-w-md px-5 -mt-10 relative z-20"
+        className="w-full max-w-md px-5 -mt-10 relative z-20 pb-16"
       >
         <div className="bg-brand-surface-lowest rounded-3xl shadow-xl p-8 flex flex-col gap-8 border border-brand-outline/10">
           {/* Tabs */}
@@ -221,6 +238,34 @@ export const LoginScreen: React.FC = () => {
             >
               {mode === 'login' ? 'Se connecter' : 'Créer un compte'}
             </button>
+          </div>
+
+          {/* DÉMO QUICK BYPASS SECTION */}
+          <div className="flex flex-col gap-3 pt-4 border-t border-brand-outline/10">
+            <p className="text-center text-xs font-black tracking-widest text-brand-primary uppercase">Accès Démo Instantané</p>
+            <div className="grid grid-cols-3 gap-2">
+              <button 
+                onClick={() => handleDemoLogin('admin')}
+                className="py-2.5 px-1 bg-brand-surface-low border border-brand-outline/20 rounded-xl font-black text-[11px] text-brand-on-surface hover:bg-brand-primary hover:text-white transition-all flex flex-col items-center justify-center gap-1 active:scale-95 shadow-sm"
+              >
+                <Shield size={16} />
+                Admin
+              </button>
+              <button 
+                onClick={() => handleDemoLogin('livreur')}
+                className="py-2.5 px-1 bg-brand-surface-low border border-brand-outline/20 rounded-xl font-black text-[11px] text-brand-on-surface hover:bg-brand-primary hover:text-white transition-all flex flex-col items-center justify-center gap-1 active:scale-95 shadow-sm"
+              >
+                <Bike size={16} />
+                Livreur
+              </button>
+              <button 
+                onClick={() => handleDemoLogin('client')}
+                className="py-2.5 px-1 bg-brand-surface-low border border-brand-outline/20 rounded-xl font-black text-[11px] text-brand-on-surface hover:bg-brand-primary hover:text-white transition-all flex flex-col items-center justify-center gap-1 active:scale-95 shadow-sm"
+              >
+                <Users size={16} />
+                Client
+              </button>
+            </div>
           </div>
 
           <div className="flex items-center gap-4">

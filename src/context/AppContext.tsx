@@ -28,8 +28,32 @@ const initialState: AppState = {
   authChecked: false,
 };
 
-function createUserFromAuth(authUser: any): User {
+async function loadUserProfile(authUser: any): Promise<User> {
   const metadata = authUser.user_metadata || {};
+  
+  // Essayer de récupérer le profil complet via Supabase DB
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', authUser.email)
+      .single();
+
+    if (data) {
+      return {
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        houseNumber: data.house_number,
+        avatar: data.avatar || metadata.avatar || 'https://lh3.googleusercontent.com/aida-public/AB6AXuAgGuMREuc2sBVsLkVQZ0N0VxnF2YJZXQfbTOE7j5GGHVoadnlOTqO58GwMpUnBC9yq6ABwjfGPBzmpBzHJr_NRK-UknmQAJ1GjaHvtxgqs7HONsP7ojPsYGeOXhQzmEwF2AB8dM8CWgg_qgyzrp1r7PyJQJRjwDBokgXV60uUX88o6jVGZTed2wF-Z4cGXMYvBgEE1AK9orkYSODC3inRRqegq5tTbkQQU-2j5AN_yAgXqR4d2_7pj50a0sJXWHrDZK5W2kMCWtHL3',
+        role: data.role as import('../types').UserRole,
+      };
+    }
+  } catch (err) {
+    console.error("Failed to load user profile", err);
+  }
+
+  // Fallback
   return {
     id: authUser.id,
     name: metadata.name || authUser.email?.split('@')[0] || 'Utilisateur',
@@ -38,6 +62,7 @@ function createUserFromAuth(authUser: any): User {
     avatar:
       metadata.avatar ||
       'https://lh3.googleusercontent.com/aida-public/AB6AXuAgGuMREuc2sBVsLkVQZ0N0VxnF2YJZXQfbTOE7j5GGHVoadnlOTqO58GwMpUnBC9yq6ABwjfGPBzmpBzHJr_NRK-UknmQAJ1GjaHvtxgqs7HONsP7ojPsYGeOXhQzmEwF2AB8dM8CWgg_qgyzrp1r7PyJQJRjwDBokgXV60uUX88o6jVGZTed2wF-Z4cGXMYvBgEE1AK9orkYSODC3inRRqegq5tTbkQQU-2j5AN_yAgXqR4d2_7pj50a0sJXWHrDZK5W2kMCWtHL3',
+    role: 'client', // Default to client if no profile found
   };
 }
 
@@ -92,22 +117,34 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   useEffect(() => {
     const restoreSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (data.session?.user) {
-        dispatch({ type: 'SET_USER', payload: createUserFromAuth(data.session.user) });
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (data.session?.user) {
+          const userProfile = await loadUserProfile(data.session.user);
+          dispatch({ type: 'SET_USER', payload: userProfile });
+        }
+      } catch (err) {
+        console.error("Failed to restore session", err);
+      } finally {
+        dispatch({ type: 'SET_AUTH_CHECKED', payload: true });
       }
-      dispatch({ type: 'SET_AUTH_CHECKED', payload: true });
     };
 
     restoreSession();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session?.user) {
-        dispatch({ type: 'SET_USER', payload: createUserFromAuth(session.user) });
-      } else {
-        dispatch({ type: 'SET_USER', payload: null });
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      try {
+        if (session?.user) {
+          const userProfile = await loadUserProfile(session.user);
+          dispatch({ type: 'SET_USER', payload: userProfile });
+        } else {
+          dispatch({ type: 'SET_USER', payload: null });
+        }
+      } catch (err) {
+        console.error("Error on auth state change", err);
+      } finally {
+        dispatch({ type: 'SET_AUTH_CHECKED', payload: true });
       }
-      dispatch({ type: 'SET_AUTH_CHECKED', payload: true });
     });
 
     return () => {
