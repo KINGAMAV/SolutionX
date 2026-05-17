@@ -151,10 +151,29 @@ export const LivreurDashboard: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-brand-background flex flex-col md:flex-row">
+    <div className="min-h-screen bg-brand-background flex flex-col md:flex-row pb-20 md:pb-0">
       
-      {/* Sidebar */}
-      <aside className="w-full md:w-64 bg-brand-surface-lowest border-r border-brand-outline/10 flex flex-col">
+      {/* Mobile Top Header */}
+      <header className="md:hidden bg-brand-surface-lowest border-b border-brand-outline/10 px-5 py-4 flex items-center justify-between sticky top-0 z-30 shadow-sm shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-brand-primary rounded-xl flex items-center justify-center text-white shadow-md">
+            <Bike size={16} />
+          </div>
+          <div>
+            <h1 className="font-black text-brand-primary text-sm leading-none">Livreur</h1>
+            <p className="text-[9px] font-bold text-brand-on-surface-variant uppercase mt-0.5">CitéConnect</p>
+          </div>
+        </div>
+        <button 
+          onClick={handleLogout}
+          className="p-2 bg-red-50 text-red-500 rounded-xl active:scale-95 transition-all"
+        >
+          <LogOut size={16} />
+        </button>
+      </header>
+
+      {/* Sidebar (Desktop) */}
+      <aside className="hidden md:flex w-64 bg-brand-surface-lowest border-r border-brand-outline/10 flex-col shrink-0">
         <div className="p-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-brand-primary rounded-xl flex items-center justify-center shadow-lg shadow-brand-primary/10">
@@ -167,17 +186,17 @@ export const LivreurDashboard: React.FC = () => {
           </div>
         </div>
 
-        <nav className="flex-1 px-4 space-y-2 mt-4 flex md:flex-col overflow-x-auto md:overflow-visible scrollbar-hide">
+        <nav className="flex-1 px-4 space-y-2 mt-4">
           <button 
             onClick={() => setActiveTab('active')}
-            className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold text-sm transition-all min-w-[max-content] w-full ${activeTab === 'active' ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/15' : 'text-brand-on-surface-variant hover:bg-brand-surface-low'}`}
+            className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold text-sm transition-all w-full ${activeTab === 'active' ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/15' : 'text-brand-on-surface-variant hover:bg-brand-surface-low'}`}
           >
             <Route size={18} />
             Ma course actuelle
           </button>
           <button 
             onClick={() => setActiveTab('available')}
-            className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold text-sm transition-all min-w-[max-content] w-full ${activeTab === 'available' ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/15' : 'text-brand-on-surface-variant hover:bg-brand-surface-low'}`}
+            className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold text-sm transition-all w-full ${activeTab === 'available' ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/15' : 'text-brand-on-surface-variant hover:bg-brand-surface-low'}`}
           >
             <Package size={18} />
             Courses disponibles
@@ -187,7 +206,7 @@ export const LivreurDashboard: React.FC = () => {
           </button>
           <button 
             onClick={() => setActiveTab('earnings')}
-            className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold text-sm transition-all min-w-[max-content] w-full ${activeTab === 'earnings' ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/15' : 'text-brand-on-surface-variant hover:bg-brand-surface-low'}`}
+            className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold text-sm transition-all w-full ${activeTab === 'earnings' ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/15' : 'text-brand-on-surface-variant hover:bg-brand-surface-low'}`}
           >
             <DollarSign size={18} />
             Historique & Revenus
@@ -206,7 +225,7 @@ export const LivreurDashboard: React.FC = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-6 md:p-10 overflow-y-auto">
+      <main className="flex-1 p-5 md:p-10 overflow-y-auto">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -520,6 +539,39 @@ export const LivreurDashboard: React.FC = () => {
           </motion.div>
         </AnimatePresence>
       </main>
+
+      {/* Mobile Bottom Navigation Bar (Mobile only) */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-brand-surface-lowest/95 backdrop-blur-md border-t border-brand-outline/10 py-3.5 px-6 flex justify-around items-center z-40 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+        <button 
+          onClick={() => setActiveTab('active')}
+          className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'active' ? 'text-brand-primary scale-105' : 'text-brand-on-surface-variant opacity-70'}`}
+        >
+          <Route size={20} />
+          <span className="text-[10px] font-black tracking-wide">Course</span>
+        </button>
+        
+        <button 
+          onClick={() => setActiveTab('available')}
+          className={`flex flex-col items-center gap-1 transition-all relative ${activeTab === 'available' ? 'text-brand-primary scale-105' : 'text-brand-on-surface-variant opacity-70'}`}
+        >
+          <Package size={20} />
+          {availableOrders.length > 0 && (
+            <span className="absolute -top-1.5 -right-2 bg-brand-primary text-white text-[8px] font-black w-4 h-4 flex items-center justify-center rounded-full">
+              {availableOrders.length}
+            </span>
+          )}
+          <span className="text-[10px] font-black tracking-wide">Dispos</span>
+        </button>
+
+        <button 
+          onClick={() => setActiveTab('earnings')}
+          className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'earnings' ? 'text-brand-primary scale-105' : 'text-brand-on-surface-variant opacity-70'}`}
+        >
+          <DollarSign size={20} />
+          <span className="text-[10px] font-black tracking-wide">Revenus</span>
+        </button>
+      </nav>
+
     </div>
   );
 };

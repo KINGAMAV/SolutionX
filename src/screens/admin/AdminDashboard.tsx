@@ -491,10 +491,29 @@ export const AdminDashboard: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-brand-background flex flex-col md:flex-row">
+    <div className="min-h-screen bg-brand-background flex flex-col md:flex-row pb-20 md:pb-0">
       
-      {/* Sidebar de navigation */}
-      <aside className="w-full md:w-64 bg-brand-surface-lowest border-r border-brand-outline/10 flex flex-col shrink-0">
+      {/* Mobile Top Header */}
+      <header className="md:hidden bg-brand-surface-lowest border-b border-brand-outline/10 px-5 py-4 flex items-center justify-between sticky top-0 z-30 shadow-sm shrink-0">
+        <div className="flex items-center gap-2">
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-md ${isAgent ? 'bg-brand-tertiary' : 'bg-brand-primary'}`}>
+            <Shield size={16} />
+          </div>
+          <div>
+            <h1 className="font-black text-brand-primary text-sm leading-none">{isAgent ? "Agent Dispatcher" : "Admin Panel"}</h1>
+            <p className="text-[9px] font-bold text-brand-on-surface-variant uppercase mt-0.5">CitéConnect</p>
+          </div>
+        </div>
+        <button 
+          onClick={handleLogout}
+          className="p-2 bg-red-50 text-red-500 rounded-xl active:scale-95 transition-all"
+        >
+          <LogOut size={16} />
+        </button>
+      </header>
+
+      {/* Sidebar (Desktop) */}
+      <aside className="hidden md:flex w-64 bg-brand-surface-lowest border-r border-brand-outline/10 flex-col shrink-0">
         <div className="p-6">
           <div className="flex items-center gap-3">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg ${isAgent ? 'bg-brand-tertiary shadow-brand-tertiary/10' : 'bg-brand-primary shadow-brand-primary/10'}`}>
@@ -507,7 +526,7 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </div>
 
-        <nav className="flex-1 px-4 space-y-1.5 mt-4 flex md:flex-col overflow-x-auto md:overflow-visible scrollbar-hide py-2">
+        <nav className="flex-1 px-4 space-y-1.5 mt-4">
           {[
             { id: 'overview', label: "Vue d'ensemble", icon: Grid },
             { id: 'accounts', label: "Comptes Pro", icon: Shield },
@@ -517,7 +536,6 @@ export const AdminDashboard: React.FC = () => {
             { id: 'clients', label: "Clients", icon: Users },
             { id: 'create_pro', label: "Créer un Pro", icon: PlusCircle },
             { id: 'helpdesk', label: "Boîte Support", icon: MessageSquare },
-            // Masqué pour l'Agent !
             ...(!isAgent ? [{ id: 'system_config', label: "Config Globale", icon: Sliders }] : [])
           ].map((tab) => {
             const Icon = tab.icon;
@@ -525,9 +543,9 @@ export const AdminDashboard: React.FC = () => {
               <button 
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold text-sm transition-all min-w-[max-content] w-full ${
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all w-full ${
                   activeTab === tab.id 
-                    ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/15' 
+                    ? 'bg-brand-primary text-white shadow-md' 
                     : 'text-brand-on-surface-variant hover:bg-brand-surface-low'
                 }`}
               >
@@ -541,7 +559,7 @@ export const AdminDashboard: React.FC = () => {
         <div className="p-4 mt-auto border-t border-brand-outline/5">
           <div className="bg-brand-surface-low p-3 rounded-2xl text-[10px] font-bold text-brand-outline mb-3 flex items-center gap-2 border border-brand-outline/10">
             <CheckSquare size={12} className="text-brand-primary shrink-0" />
-            <span>Mode : {isAgent ? 'Agent Limité (RBAC)' : 'Super Administrateur'}</span>
+            <span>Mode : {isAgent ? 'Agent Limité' : 'Super Admin'}</span>
           </div>
           <button 
             onClick={handleLogout}
@@ -554,7 +572,7 @@ export const AdminDashboard: React.FC = () => {
       </aside>
 
       {/* Main Container */}
-      <main className="flex-1 p-6 md:p-10 overflow-y-auto max-w-7xl mx-auto w-full">
+      <main className="flex-1 p-5 md:p-10 overflow-y-auto max-w-7xl mx-auto w-full">
         {isAgent && (
           <div className="bg-brand-tertiary/10 border border-brand-tertiary/20 text-brand-on-surface-variant p-4 rounded-2xl font-bold text-xs flex items-center gap-2 mb-6 shadow-sm">
             <ShieldAlert size={16} className="text-brand-tertiary shrink-0" />
@@ -1484,6 +1502,43 @@ export const AdminDashboard: React.FC = () => {
           </motion.div>
         </div>
       )}
+
+      {/* Mobile Bottom Navigation Bar (Mobile only) */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-brand-surface-lowest/95 backdrop-blur-md border-t border-brand-outline/10 py-3.5 px-6 flex justify-around items-center z-40 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+        <button 
+          onClick={() => setActiveTab('overview')}
+          className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'overview' ? 'text-brand-primary scale-105' : 'text-brand-on-surface-variant opacity-70'}`}
+        >
+          <Grid size={20} />
+          <span className="text-[10px] font-black tracking-wide">Radar</span>
+        </button>
+        
+        <button 
+          onClick={() => setActiveTab('accounts')}
+          className={`flex flex-col items-center gap-1 transition-all ${['accounts', 'create_pro', 'boutiques', 'livreurs', 'artisans', 'clients'].includes(activeTab) ? 'text-brand-primary scale-105' : 'text-brand-on-surface-variant opacity-70'}`}
+        >
+          <Users size={20} />
+          <span className="text-[10px] font-black tracking-wide">Comptes</span>
+        </button>
+
+        <button 
+          onClick={() => setActiveTab('helpdesk')}
+          className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'helpdesk' ? 'text-brand-primary scale-105' : 'text-brand-on-surface-variant opacity-70'}`}
+        >
+          <MessageSquare size={20} />
+          <span className="text-[10px] font-black tracking-wide">Support</span>
+        </button>
+
+        {!isAgent && (
+          <button 
+            onClick={() => setActiveTab('system_config')}
+            className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'system_config' ? 'text-brand-primary scale-105' : 'text-brand-on-surface-variant opacity-70'}`}
+          >
+            <Sliders size={20} />
+            <span className="text-[10px] font-black tracking-wide">Config</span>
+          </button>
+        )}
+      </nav>
 
     </div>
   );

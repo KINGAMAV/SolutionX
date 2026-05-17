@@ -152,10 +152,29 @@ export const BoutiqueDashboard: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-brand-background flex flex-col md:flex-row">
+    <div className="min-h-screen bg-brand-background flex flex-col md:flex-row pb-20 md:pb-0">
       
-      {/* Sidebar */}
-      <aside className="w-full md:w-64 bg-brand-surface-lowest border-r border-brand-outline/10 flex flex-col shrink-0">
+      {/* Mobile Top Header */}
+      <header className="md:hidden bg-brand-surface-lowest border-b border-brand-outline/10 px-5 py-4 flex items-center justify-between sticky top-0 z-30 shadow-sm shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-brand-tertiary rounded-xl flex items-center justify-center text-brand-on-tertiary shadow-md">
+            <Store size={16} />
+          </div>
+          <div>
+            <h1 className="font-black text-brand-on-surface text-sm leading-none">Boutique</h1>
+            <p className="text-[9px] font-bold text-brand-on-surface-variant uppercase mt-0.5">CitéConnect</p>
+          </div>
+        </div>
+        <button 
+          onClick={handleLogout}
+          className="p-2 bg-red-50 text-red-500 rounded-xl active:scale-95 transition-all"
+        >
+          <LogOut size={16} />
+        </button>
+      </header>
+
+      {/* Sidebar (Desktop) */}
+      <aside className="hidden md:flex w-64 bg-brand-surface-lowest border-r border-brand-outline/10 flex-col shrink-0">
         <div className="p-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-brand-tertiary rounded-xl flex items-center justify-center">
@@ -168,10 +187,10 @@ export const BoutiqueDashboard: React.FC = () => {
           </div>
         </div>
 
-        <nav className="flex-1 px-4 space-y-2 mt-4 flex md:flex-col overflow-x-auto md:overflow-visible scrollbar-hide py-2">
+        <nav className="flex-1 px-4 space-y-2 mt-4">
           <button 
             onClick={() => setActiveTab('orders')}
-            className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold text-sm transition-all min-w-[max-content] w-full ${activeTab === 'orders' ? 'bg-brand-tertiary text-brand-on-tertiary shadow-md shadow-brand-tertiary/20' : 'text-brand-on-surface-variant hover:bg-brand-surface-low'}`}
+            className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold text-sm transition-all w-full ${activeTab === 'orders' ? 'bg-brand-tertiary text-brand-on-tertiary shadow-md shadow-brand-tertiary/20' : 'text-brand-on-surface-variant hover:bg-brand-surface-low'}`}
           >
             <ShoppingBag size={18} />
             Commandes en cours
@@ -182,7 +201,7 @@ export const BoutiqueDashboard: React.FC = () => {
           
           <button 
             onClick={() => setActiveTab('products')}
-            className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold text-sm transition-all min-w-[max-content] w-full ${activeTab === 'products' ? 'bg-brand-tertiary text-brand-on-tertiary shadow-md shadow-brand-tertiary/20' : 'text-brand-on-surface-variant hover:bg-brand-surface-low'}`}
+            className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold text-sm transition-all w-full ${activeTab === 'products' ? 'bg-brand-tertiary text-brand-on-tertiary shadow-md shadow-brand-tertiary/20' : 'text-brand-on-surface-variant hover:bg-brand-surface-low'}`}
           >
             <PackageSearch size={18} />
             Mon Catalogue
@@ -190,7 +209,7 @@ export const BoutiqueDashboard: React.FC = () => {
 
           <button 
             onClick={() => setActiveTab('analytics')}
-            className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold text-sm transition-all min-w-[max-content] w-full ${activeTab === 'analytics' ? 'bg-brand-tertiary text-brand-on-tertiary shadow-md shadow-brand-tertiary/20' : 'text-brand-on-surface-variant hover:bg-brand-surface-low'}`}
+            className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold text-sm transition-all w-full ${activeTab === 'analytics' ? 'bg-brand-tertiary text-brand-on-tertiary shadow-md shadow-brand-tertiary/20' : 'text-brand-on-surface-variant hover:bg-brand-surface-low'}`}
           >
             <TrendingUp size={18} />
             Statistiques & Ventes
@@ -209,7 +228,7 @@ export const BoutiqueDashboard: React.FC = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-6 md:p-10 overflow-y-auto max-w-6xl mx-auto w-full">
+      <main className="flex-1 p-5 md:p-10 overflow-y-auto max-w-6xl mx-auto w-full">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -517,6 +536,33 @@ export const BoutiqueDashboard: React.FC = () => {
           </motion.div>
         </div>
       )}
+
+      {/* Mobile Bottom Navigation Bar (Mobile only) */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-brand-surface-lowest/95 backdrop-blur-md border-t border-brand-outline/10 py-3.5 px-6 flex justify-around items-center z-40 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+        <button 
+          onClick={() => setActiveTab('orders')}
+          className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'orders' ? 'text-brand-tertiary scale-105' : 'text-brand-on-surface-variant opacity-70'}`}
+        >
+          <ShoppingBag size={20} />
+          <span className="text-[10px] font-black tracking-wide">Commandes</span>
+        </button>
+        
+        <button 
+          onClick={() => setActiveTab('products')}
+          className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'products' ? 'text-brand-tertiary scale-105' : 'text-brand-on-surface-variant opacity-70'}`}
+        >
+          <PackageSearch size={20} />
+          <span className="text-[10px] font-black tracking-wide">Catalogue</span>
+        </button>
+
+        <button 
+          onClick={() => setActiveTab('analytics')}
+          className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'analytics' ? 'text-brand-tertiary scale-105' : 'text-brand-on-surface-variant opacity-70'}`}
+        >
+          <TrendingUp size={20} />
+          <span className="text-[10px] font-black tracking-wide">Ventes</span>
+        </button>
+      </nav>
 
     </div>
   );
