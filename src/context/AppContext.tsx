@@ -18,6 +18,7 @@ type AppAction =
   | { type: 'UPDATE_QUANTITY'; payload: { id: string; quantity: number } }
   | { type: 'CLEAR_CART' }
   | { type: 'ADD_ORDER'; payload: Order }
+  | { type: 'SET_ORDERS'; payload: Order[] }
   | { type: 'SET_SELECTED_ARTISAN'; payload: Artisan | null };
 
 const initialState: AppState = {
@@ -31,12 +32,11 @@ const initialState: AppState = {
 async function loadUserProfile(authUser: any): Promise<User> {
   const metadata = authUser.user_metadata || {};
   
-  // Essayer de récupérer le profil complet via Supabase DB
   try {
     const { data, error } = await supabase
       .from('users')
       .select('*')
-      .eq('email', authUser.email)
+      .eq('id', authUser.id)
       .single();
 
     if (data) {
@@ -44,25 +44,23 @@ async function loadUserProfile(authUser: any): Promise<User> {
         id: data.id,
         name: data.name,
         email: data.email,
-        houseNumber: data.house_number,
-        avatar: data.avatar || metadata.avatar || 'https://lh3.googleusercontent.com/aida-public/AB6AXuAgGuMREuc2sBVsLkVQZ0N0VxnF2YJZXQfbTOE7j5GGHVoadnlOTqO58GwMpUnBC9yq6ABwjfGPBzmpBzHJr_NRK-UknmQAJ1GjaHvtxgqs7HONsP7ojPsYGeOXhQzmEwF2AB8dM8CWgg_qgyzrp1r7PyJQJRjwDBokgXV60uUX88o6jVGZTed2wF-Z4cGXMYvBgEE1AK9orkYSODC3inRRqegq5tTbkQQU-2j5AN_yAgXqR4d2_7pj50a0sJXWHrDZK5W2kMCWtHL3',
+        houseNumber: data.house_number || '',
+        avatar: data.avatar || metadata.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=100',
         role: data.role as import('../types').UserRole,
       };
     }
   } catch (err) {
-    console.error("Failed to load user profile", err);
+    console.error("Failed to load user profile from DB", err);
   }
 
-  // Fallback
+  // Fallback to metadata
   return {
     id: authUser.id,
     name: metadata.name || authUser.email?.split('@')[0] || 'Utilisateur',
     email: authUser.email || '',
     houseNumber: metadata.houseNumber || '',
-    avatar:
-      metadata.avatar ||
-      'https://lh3.googleusercontent.com/aida-public/AB6AXuAgGuMREuc2sBVsLkVQZ0N0VxnF2YJZXQfbTOE7j5GGHVoadnlOTqO58GwMpUnBC9yq6ABwjfGPBzmpBzHJr_NRK-UknmQAJ1GjaHvtxgqs7HONsP7ojPsYGeOXhQzmEwF2AB8dM8CWgg_qgyzrp1r7PyJQJRjwDBokgXV60uUX88o6jVGZTed2wF-Z4cGXMYvBgEE1AK9orkYSODC3inRRqegq5tTbkQQU-2j5AN_yAgXqR4d2_7pj50a0sJXWHrDZK5W2kMCWtHL3',
-    role: 'client', // Default to client if no profile found
+    avatar: metadata.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=100',
+    role: (metadata.role as import('../types').UserRole) || 'client',
   };
 }
 
@@ -99,7 +97,9 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case 'CLEAR_CART':
       return { ...state, cart: [] };
     case 'ADD_ORDER':
-      return { ...state, orders: [...state.orders, action.payload] };
+      return { ...state, orders: [action.payload, ...state.orders] };
+    case 'SET_ORDERS':
+      return { ...state, orders: action.payload };
     case 'SET_SELECTED_ARTISAN':
       return { ...state, selectedArtisan: action.payload };
     default:
@@ -116,12 +116,42 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [state, dispatch] = useReducer(appReducer, initialState);
 
   useEffect(() => {
+    const fetchUserOrders = async (userId: string) => {
+      try {
+        const { data } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
+        
+        if (data) {
+          const mappedOrders: Order[] = data.map(o => ({
+            id: o.id,
+            userId: o.user_id,
+            boutiqueId: o.boutique_id,
+            livreurId: o.livreur_id,
+            status: o.status,
+            paymentStatus: o.payment_status,
+            items: o.items,
+            total: o.total,
+            deliveryFee: o.delivery_fee,
+            createdAt: o.created_at,
+            deliveryTime: o.delivery_time
+          }));
+          dispatch({ type: 'SET_ORDERS', payload: mappedOrders });
+        }
+      } catch (err) {
+        console.error("Failed to fetch orders", err);
+      }
+    };
+
     const restoreSession = async () => {
       try {
         const { data } = await supabase.auth.getSession();
         if (data.session?.user) {
           const userProfile = await loadUserProfile(data.session.user);
           dispatch({ type: 'SET_USER', payload: userProfile });
+          await fetchUserOrders(data.session.user.id);
         }
       } catch (err) {
         console.error("Failed to restore session", err);
@@ -137,8 +167,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (session?.user) {
           const userProfile = await loadUserProfile(session.user);
           dispatch({ type: 'SET_USER', payload: userProfile });
+          await fetchUserOrders(session.user.id);
         } else {
           dispatch({ type: 'SET_USER', payload: null });
+          dispatch({ type: 'SET_ORDERS', payload: [] });
         }
       } catch (err) {
         console.error("Error on auth state change", err);

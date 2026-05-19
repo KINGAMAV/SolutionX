@@ -1,13 +1,51 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Share2, Heart, Star, Verified, MapPin, Calendar, Clock, ChevronRight, CalendarCheck } from 'lucide-react';
-import { ARTISANS } from '../data';
+import { ArrowLeft, Share2, Heart, Star, Verified, MapPin, Calendar, Clock, ChevronRight, CalendarCheck, Loader2 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import { Artisan } from '../types';
 
 export const ArtisanProfileScreen: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const artisan = ARTISANS.find(a => a.id === id) || ARTISANS[0];
+  const [artisan, setArtisan] = useState<Artisan | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchArtisan = async () => {
+      try {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from('artisans')
+          .select('*')
+          .eq('id', id)
+          .single();
+        
+        if (error) throw error;
+        
+        if (data) {
+          setArtisan({
+            id: data.id,
+            name: data.name,
+            category: data.category,
+            experience: data.experience,
+            rating: Number(data.rating),
+            hourlyRate: data.hourly_rate,
+            verified: data.verified,
+            specialty: data.specialty,
+            zones: data.zones || [],
+            avatar: data.avatar || data.avatar_url || 'https://lh3.googleusercontent.com/aida-public/AB6AXuAgGuMREuc2sBVsLkVQZ0N0VxnF2YJZXQfbTOE7j5GGHVoadnlOTqO58GwMpUnBC9yq6ABwjfGPBzmpBzHJr_NRK-UknmQAJ1GjaHvtxgqs7HONsP7ojPsYGeOXhQzmEwF2AB8dM8CWgg_qgyzrp1r7PyJQJRjwDBokgXV60uUX88o6jVGZTed2wF-Z4cGXMYvBgEE1AK9orkYSODC3inRRqegq5tTbkQQU-2j5AN_yAgXqR4d2_7pj50a0sJXWHrDZK5W2kMCWtHL3'
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching artisan:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) fetchArtisan();
+  }, [id]);
 
   const availability = [
     { day: 'LUN', date: 18, active: true },
@@ -18,6 +56,24 @@ export const ArtisanProfileScreen: React.FC = () => {
   ];
 
   const timeSlots = ['09:00', '10:30', '14:00', '15:30', '17:00', 'Complet'];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-brand-background">
+        <Loader2 className="animate-spin text-brand-primary" size={40} />
+        <span className="text-sm font-black uppercase tracking-widest text-brand-primary">Chargement du profil...</span>
+      </div>
+    );
+  }
+
+  if (!artisan) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-5 text-center bg-brand-background">
+        <h2 className="text-xl font-bold">Artisan introuvable</h2>
+        <button onClick={() => navigate(-1)} className="mt-4 text-brand-primary font-bold">Retour</button>
+      </div>
+    );
+  }
 
   return (
     <motion.div 
@@ -34,11 +90,11 @@ export const ArtisanProfileScreen: React.FC = () => {
         </div>
         <div className="flex items-center gap-2">
           <button className="p-2 text-brand-primary"><Share2 size={22} /></button>
-          <button className="p-2 text-brand-primary"><Heart size={22} /></button>
+          <button className="p-2 text-brand-primary group active:scale-90 transition-transform"><Heart size={22} /></button>
         </div>
       </header>
 
-      <main className="px-5 pt-10 space-y-10">
+      <main className="px-5 pt-10 space-y-10 max-w-md mx-auto">
         {/* Profile Hero */}
         <section className="flex flex-col items-center">
           <div className="relative mb-6">
@@ -52,16 +108,18 @@ export const ArtisanProfileScreen: React.FC = () => {
           </div>
           <h2 className="text-2xl font-black text-brand-on-surface tracking-tight">{artisan.name}</h2>
           <p className="text-sm font-bold text-brand-on-surface-variant flex items-center gap-2">
-            {artisan.specialty}
+            {artisan.specialty || artisan.category}
           </p>
         </section>
 
         {/* Stats Bento */}
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-brand-surface-lowest p-5 rounded-3xl flex flex-col items-center text-center space-y-1 border border-brand-outline/5 shadow-sm">
-            <Verified size={24} className="text-brand-primary fill-brand-primary/10" />
-            <span className="text-[10px] font-bold text-brand-outline uppercase tracking-wider">Vérifié</span>
-            <span className="text-base font-black text-brand-on-surface leading-tight">Identité &<br />Diplôme</span>
+            <Verified size={24} className={artisan.verified ? "text-brand-primary fill-brand-primary/10" : "text-brand-outline opacity-30"} />
+            <span className="text-[10px] font-bold text-brand-outline uppercase tracking-wider">{artisan.verified ? "Vérifié" : "En cours"}</span>
+            <span className="text-base font-black text-brand-on-surface leading-tight">
+              {artisan.verified ? "Identité &\nDiplôme" : "Vérification\nen cours"}
+            </span>
           </div>
           <div className="bg-brand-surface-lowest p-5 rounded-3xl flex flex-col items-center text-center space-y-1 border border-brand-outline/5 shadow-sm">
             <div className="bg-brand-primary-container/10 p-2 rounded-xl">
@@ -74,9 +132,9 @@ export const ArtisanProfileScreen: React.FC = () => {
             <div className="bg-brand-secondary-container/10 p-4 rounded-2xl text-brand-secondary">
               <MapPin size={28} />
             </div>
-            <div>
+            <div className="flex-1">
               <span className="text-[10px] font-bold text-brand-outline uppercase tracking-wider block">Zone d'intervention</span>
-              <span className="text-sm font-extrabold text-brand-on-surface">{artisan.zones.join(', ')}</span>
+              <span className="text-sm font-extrabold text-brand-on-surface line-clamp-1">{artisan.zones.join(', ')}</span>
             </div>
           </div>
         </div>
@@ -127,19 +185,11 @@ export const ArtisanProfileScreen: React.FC = () => {
         <section className="pb-10">
           <h3 className="text-lg font-black text-brand-on-surface mb-5">Réalisations récentes</h3>
           <div className="flex gap-4 overflow-x-auto hide-scrollbar">
-            <div className="flex-shrink-0 w-56 h-40 rounded-3xl overflow-hidden shadow-md">
-              <img 
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuCZVB0lZaadXKKOu2xG98il64bZowT9WCRGopVyJdpUaymTfGbRmjzz6_ZCYQoeKnluTQkla12e7Sb3Mo-FQ1nWnqUVtP7Xrn1Aw2xk_ag5C_DOKWVAB0uurn5YgPF3jcxrD9iXnq633l25a_FwVvfE0KIyrtBm-HAYLHRFHSSab60KmLTU4fNQXedhsnRYRX1Xd9vU9-KOVlItq_q90ZqeUdAAXtl2dKX3tsLFiJf0K9bV9mkncmcPFwDCZZgQhz94IIjkc7bTaYNe" 
-                alt="Work 1" 
-                className="w-full h-full object-cover" 
-              />
+            <div className="flex-shrink-0 w-56 h-40 rounded-3xl overflow-hidden shadow-md bg-brand-surface-low flex items-center justify-center text-brand-outline/20">
+              <MapPin size={40} />
             </div>
-            <div className="flex-shrink-0 w-56 h-40 rounded-3xl overflow-hidden shadow-md">
-              <img 
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuAuohMnJHHjtxPKWQrWrMZdwu0hjkFZSjYgWCIUxkwkoArCT97-iCeMtI8BMjvKZhRLnE-0oy7_WSXUMHr-pLwBXNNLGdvtxY3k3JgeQECHTwI84ebA8abwppDg1RIajlwyj42QT4hDaIdM3FHwhxlLZfIAT2gffsxccI8CRi_w0cUNhm03y3b2x7og13Zc0kCZEbdP7iuPdU3rpjHEywmjJ8TTVHianZtPieG_gRcoreq_el4H28Q9lGV5PN3W_v_nJ0s5PDdj8lUW" 
-                alt="Work 2" 
-                className="w-full h-full object-cover" 
-              />
+            <div className="flex-shrink-0 w-56 h-40 rounded-3xl overflow-hidden shadow-md bg-brand-surface-low flex items-center justify-center text-brand-outline/20">
+              <Star size={40} />
             </div>
           </div>
         </section>
@@ -150,14 +200,14 @@ export const ArtisanProfileScreen: React.FC = () => {
         <div className="flex items-center gap-6 max-w-md mx-auto">
           <div className="flex flex-col">
             <span className="text-[10px] font-black text-brand-outline uppercase tracking-widest">Estimation</span>
-            <span className="text-xl font-black text-brand-on-surface">~22.500 FCFA</span>
+            <span className="text-xl font-black text-brand-on-surface">~{Math.round(artisan.hourlyRate * 1.5).toLocaleString()} FCFA</span>
           </div>
           <button 
             onClick={() => navigate('/services/booking')}
             className="flex-1 bg-brand-primary text-white font-black py-5 rounded-2xl shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3"
           >
             Demander un RDV
-            <Calendar size={20} />
+            <CalendarCheck size={20} />
           </button>
         </div>
       </div>

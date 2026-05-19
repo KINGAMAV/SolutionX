@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Bell, MapPin, CheckCircle2, Utensils, Box, Bike, Home, Star, Compass } from 'lucide-react';
+import { useApp } from '../context/AppContext';
 
 // Component drawing a gorgeous, simulated vector tracking map using SVG
 const VectorTrackingMap: React.FC<{ progress: number; speed: string; status: string }> = ({ progress, speed, status }) => {
@@ -132,6 +133,10 @@ const VectorTrackingMap: React.FC<{ progress: number; speed: string; status: str
 
 export const OrderTrackingScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { state } = useApp();
+  
+  // Get the most recent order
+  const latestOrder = state.orders[0];
 
   // États dynamiques du tracker
   const [progress, setProgress] = useState(0.4); // Commencer à 40% par défaut
@@ -140,8 +145,11 @@ export const OrderTrackingScreen: React.FC = () => {
 
   // Écouter en temps réel les coordonnées partagées par le livreur
   useEffect(() => {
+    if (!latestOrder) return;
+
+    const orderId = latestOrder.id;
     // Charger immédiatement s'il y a quelque chose de stocké
-    const initialPos = localStorage.getItem('livreur_position_SOL-92834');
+    const initialPos = localStorage.getItem(`livreur_position_${orderId}`);
     if (initialPos) {
       const pos = JSON.parse(initialPos);
       setProgress(pos.progress);
@@ -150,33 +158,51 @@ export const OrderTrackingScreen: React.FC = () => {
     }
 
     const interval = setInterval(() => {
-      const posString = localStorage.getItem('livreur_position_SOL-92834');
+      const posString = localStorage.getItem(`livreur_position_${orderId}`);
       if (posString) {
         const pos = JSON.parse(posString);
         setProgress(pos.progress);
         setSpeed(pos.speed || '24 km/h');
         setIsLive(pos.status === 'en_route');
       } else {
-        setIsLive(false);
+        // Simple simulation if no live data
+        if (progress < 1) {
+          setProgress(prev => Math.min(prev + 0.01, 1));
+        }
       }
-    }, 1000);
+    }, 3000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [latestOrder, progress]);
+
+  if (!latestOrder) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-5 text-center bg-brand-background">
+        <div className="w-24 h-24 bg-brand-surface-low rounded-full flex items-center justify-center text-brand-outline opacity-20 mb-6">
+          <Box size={48} />
+        </div>
+        <h2 className="text-2xl font-black text-brand-on-surface">Aucune commande active</h2>
+        <p className="text-brand-outline mt-3 max-w-xs mx-auto">Vous n'avez pas encore passé de commande ou votre historique est vide.</p>
+        <button onClick={() => navigate('/')} className="mt-8 px-10 py-4 bg-brand-primary text-white rounded-3xl font-black uppercase tracking-widest text-xs shadow-xl active:scale-95 transition-all">
+          Découvrir les services
+        </button>
+      </div>
+    );
+  }
 
   const steps = [
-    { label: 'Confirmée', time: '14:05', status: 'completed', icon: CheckCircle2 },
-    { label: 'En préparation', time: '14:15', status: 'completed', icon: Utensils },
-    { label: 'Prête', time: '14:30', status: 'completed', icon: Box },
+    { label: 'Confirmée', time: new Date(latestOrder.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }), status: 'completed', icon: CheckCircle2 },
+    { label: 'En préparation', time: null, status: progress >= 0.2 ? 'completed' : 'active', icon: Utensils },
+    { label: 'Prête', time: null, status: progress >= 0.4 ? 'completed' : (progress >= 0.2 ? 'active' : 'upcoming'), icon: Box },
     { 
       label: progress >= 1 ? 'Arrivée à destination' : 'En cours de livraison', 
-      sub: progress >= 1 ? 'Votre livreur Moussa est devant votre villa' : 'Le livreur approche de votre villa', 
-      status: progress >= 1 ? 'completed' : 'active', 
+      sub: progress >= 1 ? `Votre livreur ${latestOrder.carrier || 'Moussa'} est devant votre villa` : 'Le livreur approche de votre villa', 
+      status: progress >= 1 ? 'completed' : (progress >= 0.4 ? 'active' : 'upcoming'), 
       icon: Bike 
     },
     { 
       label: progress >= 1 ? 'Livrée' : 'En attente de livraison', 
-      sub: progress >= 1 ? 'Commande livrée' : "En attente d'arrivée", 
+      sub: progress >= 1 ? 'Bonne dégustation !' : "En attente d'arrivée", 
       status: progress >= 1 ? 'active' : 'upcoming', 
       icon: Home 
     },
@@ -195,7 +221,7 @@ export const OrderTrackingScreen: React.FC = () => {
           </button>
           <h1 className="text-xl font-bold text-brand-primary">Suivi de commande</h1>
         </div>
-        <button className="p-2 text-brand-primary"><Bell size={24} /></button>
+        <button className="p-2 text-brand-primary group active:scale-90 transition-transform"><Bell size={24} /></button>
       </header>
 
       <main className="px-5 py-8 space-y-8 max-w-2xl mx-auto">
@@ -206,7 +232,7 @@ export const OrderTrackingScreen: React.FC = () => {
             <div className="flex items-center gap-2">
               <MapPin size={20} className="text-brand-primary fill-brand-primary/10 animate-bounce" />
               <span className="text-xs font-black text-brand-on-surface">
-                {progress >= 1 ? 'Arrivée immédiate !' : `Arrivée prévue : 14:45`}
+                {progress >= 1 ? 'Arrivée immédiate !' : `Arrivée prévue : ${latestOrder.deliveryTime || '14:45'}`}
               </span>
             </div>
             <span className={`px-3 py-1 text-[10px] font-black rounded-full uppercase tracking-widest ${
@@ -223,9 +249,9 @@ export const OrderTrackingScreen: React.FC = () => {
 
         {/* Live HUD alert when GPS sharing starts */}
         {isLive && (
-          <div className="bg-brand-primary/10 border border-brand-primary/20 text-brand-primary p-4 rounded-2xl font-bold text-sm text-center animate-pulse flex items-center justify-center gap-2">
+          <div className="bg-brand-primary/10 border border-brand-primary/20 text-brand-primary p-4 rounded-2xl font-bold text-sm text-center animate-pulse flex items-center justify-center gap-2 shadow-sm">
             <Compass className="animate-spin" size={18} />
-            Le livreur partage sa position GPS en direct ! Suivez son trajet sur la carte.
+            Le livreur partage sa position GPS en direct !
           </div>
         )}
 
@@ -274,32 +300,34 @@ export const OrderTrackingScreen: React.FC = () => {
         <section className="bg-brand-surface-lowest p-8 rounded-[2.5rem] border border-brand-outline/10 shadow-sm space-y-6">
           <div className="flex justify-between items-center">
             <h3 className="text-[10px] font-black text-brand-outline uppercase tracking-widest">Détails de la commande</h3>
-            <span className="text-xs font-black text-brand-primary">#SOL-92834</span>
+            <span className="text-xs font-black text-brand-primary">#{latestOrder.id}</span>
           </div>
           <div className="space-y-4">
-            <div className="flex justify-between items-center px-1">
-              <span className="text-sm font-medium text-brand-on-surface-variant">2x Poulet Braisé ATTIÉKÉ</span>
-              <span className="font-bold text-sm">12,000 FCFA</span>
-            </div>
-            <div className="flex justify-between items-center px-1">
-              <span className="text-sm font-medium text-brand-on-surface-variant">1x Alloco (Format Large)</span>
-              <span className="font-bold text-sm">2,500 FCFA</span>
+            {latestOrder.items.map((item, idx) => (
+              <div key={idx} className="flex justify-between items-center px-1">
+                <span className="text-sm font-medium text-brand-on-surface-variant">{item.quantity}x {item.name}</span>
+                <span className="font-bold text-sm">{(item.price * item.quantity).toLocaleString()} FCFA</span>
+              </div>
+            ))}
+            <div className="flex justify-between items-center px-1 text-brand-outline/70">
+              <span className="text-xs font-medium">Frais de livraison</span>
+              <span className="font-bold text-xs">{latestOrder.deliveryFee.toLocaleString()} FCFA</span>
             </div>
             <div className="h-px bg-brand-outline/5" />
             <div className="flex justify-between items-center pt-2">
               <span className="text-xl font-black text-brand-on-surface">Total</span>
-              <span className="text-2xl font-black text-brand-primary">16,000 FCFA</span>
+              <span className="text-2xl font-black text-brand-primary">{latestOrder.total.toLocaleString()} FCFA</span>
             </div>
           </div>
         </section>
 
         {/* Action Button */}
         <button 
-          onClick={() => navigate('/orders/payment')}
+          onClick={() => navigate('/')}
           className="w-full h-16 bg-brand-primary text-white rounded-2xl font-black flex items-center justify-center gap-3 shadow-2xl active:scale-95 transition-all text-lg"
         >
-          <Star size={24} className="fill-current animate-bounce" />
-          Noter la commande
+          <Star size={24} className="fill-current" />
+          Accepter et Finaliser
         </button>
       </main>
     </motion.div>

@@ -56,7 +56,10 @@ export const ProfileScreen: React.FC = () => {
           {/* History */}
           <div className="bg-brand-surface-lowest rounded-3xl p-5 shadow-sm border border-brand-outline/5">
             <p className="text-[10px] font-black text-brand-primary mb-4 uppercase tracking-[0.2em] ml-2">Activité & Commandes</p>
-            <button className="w-full flex items-center justify-between p-4 bg-brand-surface-low/50 rounded-2xl group active:scale-[0.98] transition-all">
+            <button 
+              onClick={() => navigate('/orders')}
+              className="w-full flex items-center justify-between p-4 bg-brand-surface-low/50 rounded-2xl group active:scale-[0.98] transition-all"
+            >
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 rounded-xl bg-brand-primary-fixed flex items-center justify-center text-brand-primary">
                   <Receipt size={20} />

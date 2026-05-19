@@ -1,12 +1,4 @@
-import { type Artisan, type Product, type Order, type User } from './types';
-
-export const MOCK_USERS: Record<string, User> = {
-  client: { id: 'u1', name: 'Jean-Marc', email: 'jeanmarc@example.com', houseNumber: 'Villa 124', role: 'client', avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAgGuMREuc2sBVsLkVQZ0N0VxnF2YJZXQfbTOE7j5GGHVoadnlOTqO58GwMpUnBC9yq6ABwjfGPBzmpBzHJr_NRK-UknmQAJ1GjaHvtxgqs7HONsP7ojPsYGeOXhQzmEwF2AB8dM8CWgg_qgyzrp1r7PyJQJRjwDBokgXV60uUX88o6jVGZTed2wF-Z4cGXMYvBgEE1AK9orkYSODC3inRRqegq5tTbkQQU-2j5AN_yAgXqR4d2_7pj50a0sJXWHrDZK5W2kMCWtHL3' },
-  agent: { id: 'u2', name: 'Agent Connect', email: 'agent@example.com', houseNumber: 'HQ', role: 'agent' },
-  admin: { id: 'u3', name: 'Admin Global', email: 'admin@example.com', houseNumber: 'HQ', role: 'admin' },
-  boutique: { id: 'u4', name: 'Boutique Maquis', email: 'boutique@example.com', houseNumber: 'Zone 4', role: 'boutique' },
-  livreur: { id: 'u5', name: 'Moussa Livreur', email: 'livreur@example.com', houseNumber: 'Cocody', role: 'livreur', avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCP5WWIGcnMzAqHjkVs78766LybBNTgzYfuy2ypdWigqLRvNeryJj7Wi_6v9RciTgLg2whU9lgg2sri2D4Hizh_650HyCIwKqQkpH-IoXZakbHCQv1Nn_zvR86KhC_pQULscsn0Z3iUp2hKgCKWpXjL_YJjunPm6QqWeepHcBHsM0dJDU4g05vJDUGd10v7HYBXHbTk4NoqiBR3j8V6z-LH8qpitBlcEFOqhsVTeQpPFjTXnkV9OnGmhOgpVEjCDE8r7ZncVfxHhrtj' },
-};
+import { type Artisan, type Product, type Order } from './types';
 
 export const ARTISANS: Artisan[] = [
   {
@@ -50,7 +42,6 @@ export const ARTISANS: Artisan[] = [
 export const PRODUCTS: Product[] = [
   {
     id: 'p1',
-    boutiqueId: 'b1',
     name: 'Sac de Riz (5kg)',
     category: 'Céréales',
     price: 4500,
@@ -59,7 +50,6 @@ export const PRODUCTS: Product[] = [
   },
   {
     id: 'p2',
-    boutiqueId: 'b2',
     name: 'Huile de palme (1L)',
     category: 'Épicerie',
     price: 1200,
@@ -68,7 +58,6 @@ export const PRODUCTS: Product[] = [
   },
   {
     id: 'p3',
-    boutiqueId: 'b1',
     name: 'Tomates Fraîches (1kg)',
     category: 'Légumes',
     price: 800,
@@ -77,7 +66,6 @@ export const PRODUCTS: Product[] = [
   },
   {
     id: 'p4',
-    boutiqueId: 'b2',
     name: 'Pack Eau Minérale (6x1.5L)',
     category: 'Boissons',
     price: 2500,
@@ -89,11 +77,7 @@ export const PRODUCTS: Product[] = [
 export const MOCK_ORDERS: Order[] = [
   {
     id: 'SOL-92834',
-    userId: 'u1',
-    boutiqueId: 'b1',
-    livreurId: 'u5',
     status: 'delivering',
-    paymentStatus: 'paid',
     items: [
       { id: '1', productId: 'p1', name: '2x Poulet Braisé ATTIÉKÉ', price: 12000, quantity: 2 },
       { id: '2', productId: 'p2', name: '1x Alloco (Format Large)', price: 2500, quantity: 1 }
@@ -102,5 +86,6 @@ export const MOCK_ORDERS: Order[] = [
     deliveryFee: 1500,
     createdAt: '14:05',
     deliveryTime: '14:45',
+    carrier: 'Moussa'
   }
 ];

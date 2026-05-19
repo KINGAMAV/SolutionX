@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Trash2, Users, Minus, Plus, Info, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Trash2, Users, Minus, Plus, Info, ChevronRight, ShoppingCart } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 export const CartScreen: React.FC = () => {
@@ -26,19 +26,7 @@ export const CartScreen: React.FC = () => {
   const total = subtotal + deliveryFee;
 
   const handleOrder = () => {
-    const order = {
-      id: `SOL-${Date.now()}`,
-      status: 'confirmed' as const,
-      items: state.cart,
-      total,
-      deliveryFee,
-      createdAt: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
-      deliveryTime: '14:45',
-      carrier: 'Moussa'
-    };
-    dispatch({ type: 'ADD_ORDER', payload: order });
-    dispatch({ type: 'CLEAR_CART' });
-    navigate('/orders/tracking');
+    navigate('/orders/payment');
   };
 
   return (
@@ -54,15 +42,17 @@ export const CartScreen: React.FC = () => {
           </button>
           <h1 className="text-xl font-bold text-brand-primary">Mon Panier</h1>
         </div>
-        <button 
-          onClick={() => dispatch({ type: 'CLEAR_CART' })}
-          className="p-2 text-brand-primary"
-        >
-          <Trash2 size={22} />
-        </button>
+        {state.cart.length > 0 && (
+          <button 
+            onClick={() => dispatch({ type: 'CLEAR_CART' })}
+            className="p-2 text-brand-primary"
+          >
+            <Trash2 size={22} />
+          </button>
+        )}
       </header>
 
-      <main className="px-5 pt-6 space-y-6">
+      <main className="px-5 pt-6 space-y-6 max-w-md mx-auto">
         {/* Toggle Grouped Order */}
         <div className="bg-brand-surface-low rounded-[2rem] p-6 border border-brand-outline/10 shadow-sm">
           <div className="flex items-center justify-between">
@@ -87,14 +77,18 @@ export const CartScreen: React.FC = () => {
         {/* Cart Items */}
         <section className="space-y-4">
           {state.cart.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-brand-on-surface-variant">Votre panier est vide</p>
+            <div className="text-center py-24 flex flex-col items-center gap-4">
+              <div className="w-20 h-20 bg-brand-surface-low rounded-full flex items-center justify-center text-brand-outline opacity-20">
+                <ShoppingCart size={40} />
+              </div>
+              <p className="text-brand-on-surface-variant font-bold">Votre panier est vide</p>
+              <button onClick={() => navigate('/services/grocery')} className="text-brand-primary font-black uppercase text-xs tracking-widest mt-2">Aller à la boutique</button>
             </div>
           ) : (
             state.cart.map((item) => (
               <div key={item.id} className="bg-brand-surface-lowest p-4 rounded-3xl shadow-sm border border-brand-outline/5 flex gap-4 items-center">
-                <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-inner bg-brand-surface-low shrink-0">
-                  <img src={`https://via.placeholder.com/80?text=${item.name}`} alt={item.name} className="w-full h-full object-cover" />
+                <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-inner bg-brand-surface-low shrink-0 flex items-center justify-center text-brand-outline">
+                  <ShoppingCart size={24} />
                 </div>
                 <div className="flex-1 space-y-1">
                   <h4 className="font-bold text-brand-on-surface text-sm leading-tight">{item.name}</h4>
@@ -120,7 +114,7 @@ export const CartScreen: React.FC = () => {
                 </div>
                 <button 
                   onClick={() => removeItem(item.id)}
-                  className="text-red-500 p-2"
+                  className="text-red-500/30 hover:text-red-500 p-2 transition-colors"
                 >
                   <Trash2 size={20} />
                 </button>
@@ -159,26 +153,17 @@ export const CartScreen: React.FC = () => {
       </main>
 
       {/* Floating Action */}
-      <div className="fixed bottom-0 left-0 w-full p-6 pb-safe z-50">
-        <div className="max-w-md mx-auto space-y-4">
+      <div className="fixed bottom-0 left-0 w-full p-6 pb-28 z-50 pointer-events-none">
+        <div className="max-w-md mx-auto pointer-events-auto">
           {state.cart.length > 0 && (
             <button 
               onClick={handleOrder}
-              className="w-full bg-brand-primary text-white py-5 rounded-2xl font-black shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-4 text-lg"
+              className="w-full bg-brand-primary text-white py-5 rounded-2xl font-black shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-4 text-lg ring-8 ring-brand-background"
             >
-              Commander
+              Passer la commande
               <ChevronRight size={24} />
             </button>
           )}
-          
-          <div className="flex bg-brand-surface-lowest dark:bg-brand-surface-low border border-brand-outline/10 shadow-lg flex justify-around items-center px-2 py-3 rounded-[2rem]">
-            {['Home', 'Services', 'Orders', 'Alerts', 'Profile'].map((l, i) => (
-              <div key={l} className={`flex flex-col items-center justify-center p-2 rounded-2xl ${i === 2 ? 'bg-brand-secondary-container text-brand-on-surface' : 'text-brand-on-surface-variant opacity-60'}`}>
-                <div size={20} className="w-5 h-5 bg-current opacity-20 rounded" />
-                <span className="text-[8px] font-black mt-1 uppercase tracking-widest">{l}</span>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
     </motion.div>

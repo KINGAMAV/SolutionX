@@ -16,6 +16,7 @@ import { GroceryScreen } from './screens/GroceryScreen';
 import { CartScreen } from './screens/CartScreen';
 import { OrderTrackingScreen } from './screens/OrderTrackingScreen';
 import { PaymentScreen } from './screens/PaymentScreen';
+import { OrdersHistoryScreen } from './screens/OrdersHistoryScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
 import { AlertsScreen } from './screens/AlertsScreen';
 import { ParcelDeliveryScreen } from './screens/ParcelDeliveryScreen';
@@ -93,7 +94,7 @@ export default function App() {
             <Route path="/services/parcel" element={<ParcelDeliveryScreen />} />
             <Route path="/services/grocery" element={<GroceryScreen />} />
             <Route path="/cart" element={<CartScreen />} />
-            <Route path="/orders" element={<OrderTrackingScreen />} />
+            <Route path="/orders" element={<OrdersHistoryScreen />} />
             <Route path="/orders/tracking" element={<OrderTrackingScreen />} />
             <Route path="/orders/payment" element={<PaymentScreen />} />
             <Route path="/alerts" element={<AlertsScreen />} />

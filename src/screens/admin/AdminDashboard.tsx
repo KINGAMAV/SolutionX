@@ -181,6 +181,10 @@ export const AdminDashboard: React.FC = () => {
     email: '',
     password: '',
     role: 'livreur' as UserRole,
+    category: '', // Pour boutique ou artisan
+    address: '',  // Pour boutique
+    specialty: '', // Pour artisan
+    hourlyRate: 2500, // Pour artisan
   });
 
   // Charger les données au montage
@@ -220,8 +224,6 @@ export const AdminDashboard: React.FC = () => {
           avatar: u.avatar || undefined,
           role: u.role as UserRole
         }));
-      } else {
-        loadedUsers = Object.values(MOCK_USERS);
       }
       setUsers(loadedUsers);
 
@@ -237,11 +239,6 @@ export const AdminDashboard: React.FC = () => {
           rating: Number(b.rating),
           logo: b.logo || undefined
         }));
-      } else {
-        loadedBoutiques = [
-          { id: 'b1', ownerId: 'u4', name: 'Le Maquis Royal', category: 'Restaurant', address: 'Rue des Jardins, Zone 4', rating: 4.8 },
-          { id: 'b2', ownerId: 'u4', name: 'Alimentation du Parc', category: 'Épicerie', address: 'Cocody Riviera 3', rating: 4.5 }
-        ];
       }
       setBoutiques(loadedBoutiques);
 
@@ -261,8 +258,6 @@ export const AdminDashboard: React.FC = () => {
           zones: a.zones || [],
           avatar: a.avatar || ''
         }));
-      } else {
-        loadedArtisans = ARTISANS;
       }
       setArtisans(loadedArtisans);
 
@@ -272,10 +267,10 @@ export const AdminDashboard: React.FC = () => {
       const artisansCount = loadedArtisans.length;
 
       setStats({
-        clients: clientsCount || 142,
-        boutiques: boutiquesCount || 12,
-        livreurs: livreursCount || 28,
-        artisans: artisansCount || 45
+        clients: clientsCount,
+        boutiques: boutiquesCount,
+        livreurs: livreursCount,
+        artisans: artisansCount
       });
 
     } catch (err) {
@@ -359,8 +354,34 @@ export const AdminDashboard: React.FC = () => {
 
       if (error) throw error;
       
+      const userId = data.user?.id;
+      if (!userId) throw new Error("ID utilisateur non récupéré.");
+
+      // Insertion dans les tables métiers si nécessaire
+      if (formData.role === 'boutique') {
+        await supabase.from('boutiques').insert([{
+          owner_id: userId,
+          name: formData.name,
+          category: formData.category || 'Supermarché',
+          address: formData.address || 'Quartier Administratif',
+          rating: 5.0
+        }]);
+      } else if (formData.role === 'artisan') {
+        await supabase.from('artisans').insert([{
+          user_id: userId,
+          name: formData.name,
+          category: formData.category || 'Menuiserie',
+          experience: 5,
+          rating: 4.5,
+          hourly_rate: formData.hourlyRate,
+          specialty: formData.specialty || 'Ebéniste',
+          verified: true,
+          zones: ['Zone 1', 'Zone 2']
+        }]);
+      }
+
       setMessage(`Le compte professionnel (${formData.role}) a été créé avec succès !`);
-      setFormData({ name: '', email: '', password: '', role: 'livreur' });
+      setFormData({ name: '', email: '', password: '', role: 'livreur', category: '', address: '', specialty: '', hourlyRate: 2500 });
       fetchData();
     } catch (err: any) {
       setMessage(`Erreur: ${err.message}`);
@@ -1041,6 +1062,66 @@ export const AdminDashboard: React.FC = () => {
                       className="w-full px-4 py-3.5 bg-brand-surface border border-brand-outline/20 rounded-2xl focus:ring-2 focus:ring-brand-primary outline-none transition-all font-medium"
                     />
                   </div>
+
+                  {formData.role === 'boutique' && (
+                    <>
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-bold text-brand-on-surface-variant">Catégorie de la boutique</label>
+                        <input 
+                          type="text" 
+                          placeholder="Ex: Supermarché, Restaurant, Pharmacie"
+                          value={formData.category}
+                          onChange={(e) => setFormData({...formData, category: e.target.value})}
+                          className="w-full px-4 py-3.5 bg-brand-surface border border-brand-outline/20 rounded-2xl focus:ring-2 focus:ring-brand-primary outline-none transition-all font-medium"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-bold text-brand-on-surface-variant">Adresse / Emplacement</label>
+                        <input 
+                          type="text" 
+                          placeholder="Ex: Rez-de-chaussée Villa 42"
+                          value={formData.address}
+                          onChange={(e) => setFormData({...formData, address: e.target.value})}
+                          className="w-full px-4 py-3.5 bg-brand-surface border border-brand-outline/20 rounded-2xl focus:ring-2 focus:ring-brand-primary outline-none transition-all font-medium"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {formData.role === 'artisan' && (
+                    <>
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-bold text-brand-on-surface-variant">Corps de métier</label>
+                        <input 
+                          type="text" 
+                          placeholder="Ex: Menuisier, Plombier, Électricien"
+                          value={formData.category}
+                          onChange={(e) => setFormData({...formData, category: e.target.value})}
+                          className="w-full px-4 py-3.5 bg-brand-surface border border-brand-outline/20 rounded-2xl focus:ring-2 focus:ring-brand-primary outline-none transition-all font-medium"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-bold text-brand-on-surface-variant">Spécialité précise</label>
+                        <input 
+                          type="text" 
+                          placeholder="Ex: Ebéniste de luxe"
+                          value={formData.specialty}
+                          onChange={(e) => setFormData({...formData, specialty: e.target.value})}
+                          className="w-full px-4 py-3.5 bg-brand-surface border border-brand-outline/20 rounded-2xl focus:ring-2 focus:ring-brand-primary outline-none transition-all font-medium"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-bold text-brand-on-surface-variant">Tarif Horaire (CFA)</label>
+                        <input 
+                          type="number" 
+                          placeholder="2500"
+                          value={formData.hourlyRate}
+                          onChange={(e) => setFormData({...formData, hourlyRate: Number(e.target.value)})}
+                          className="w-full px-4 py-3.5 bg-brand-surface border border-brand-outline/20 rounded-2xl focus:ring-2 focus:ring-brand-primary outline-none transition-all font-medium"
+                        />
+                      </div>
+                    </>
+                  )}
 
                   {message && (
                     <div className={`p-4 rounded-xl text-sm font-bold ${message.includes('Erreur') ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>

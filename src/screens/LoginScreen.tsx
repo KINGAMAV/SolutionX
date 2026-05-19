@@ -36,7 +36,11 @@ export const LoginScreen: React.FC = () => {
       });
 
       if (authError) {
-        setError(authError.message);
+        if (authError.message.includes('Failed to fetch')) {
+          setError("Erreur de connexion : Vérifiez que 'VITE_SUPABASE_URL' et 'VITE_SUPABASE_ANON_KEY' sont bien configurés dans les Secrets de AI Studio.");
+        } else {
+          setError(authError.message);
+        }
         setLoading(false);
         return;
       }
@@ -48,6 +52,7 @@ export const LoginScreen: React.FC = () => {
           data: {
             name: formData.name,
             houseNumber: formData.houseNumber,
+            role: 'client'
           },
         },
       });
@@ -57,51 +62,54 @@ export const LoginScreen: React.FC = () => {
         setLoading(false);
         return;
       }
-
-      setError('Inscription réussie. (Acceptez l\'email si la validation est activée dans Supabase)');
+      
+      setError('Inscription réussie !');
     }
 
     setLoading(false);
   };
 
-  // BYPASS DÉMO POUR TESTER SANS SUPABASE AUTH INSTANTANÉMENT !
-  const handleDemoLogin = (role: 'admin' | 'livreur' | 'client') => {
-    let demoUser;
-    if (role === 'admin') {
-      demoUser = {
-        id: 'u3',
-        name: 'Admin Global',
-        email: 'admin@example.com',
-        houseNumber: 'HQ',
-        role: 'admin' as const
-      };
-    } else if (role === 'livreur') {
-      demoUser = {
-        id: 'u5',
-        name: 'Moussa Livreur',
-        email: 'livreur@example.com',
-        houseNumber: 'Cocody',
-        role: 'livreur' as const,
-        avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCP5WWIGcnMzAqHjkVs78766LybBNTgzYfuy2ypdWigqLRvNeryJj7Wi_6v9RciTgLg2whU9lgg2sri2D4Hizh_650HyCIwKqQkpH-IoXZakbHCQv1Nn_zvR86KhC_pQULscsn0Z3iUp2hKgCKWpXjL_YJjunPm6QqWeepHcBHsM0dJDU4g05vJDUGd10v7HYBXHbTk4NoqiBR3j8V6z-LH8qpitBlcEFOqhsVTeQpPFjTXnkV9OnGmhOgpVEjCDE8r7ZncVfxHhrtj'
-      };
-    } else {
-      demoUser = {
-        id: 'u1',
-        name: 'Jean-Marc',
-        email: 'jeanmarc@example.com',
-        houseNumber: 'Villa 124',
-        role: 'client' as const,
-        avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAgGuMREuc2sBVsLkVQZ0N0VxnF2YJZXQfbTOE7j5GGHVoadnlOTqO58GwMpUnBC9yq6ABwjfGPBzmpBzHJr_NRK-UknmQAJ1GjaHvtxgqs7HONsP7ojPsYGeOXhQzmEwF2AB8dM8CWgg_qgyzrp1r7PyJQJRjwDBokgXV60uUX88o6jVGZTed2wF-Z4cGXMYvBgEE1AK9orkYSODC3inRRqegq5tTbkQQU-2j5AN_yAgXqR4d2_7pj50a0sJXWHrDZK5W2kMCWtHL3'
-      };
+  const handleBootstrapAdmin = async () => {
+    if (!formData.email || !formData.password) {
+      setError("Entrez un email et un mot de passe pour le compte admin.");
+      return;
     }
     
-    dispatch({ type: 'SET_USER', payload: demoUser });
-    dispatch({ type: 'SET_AUTH_CHECKED', payload: true });
-    
-    // Redirection directe
-    if (role === 'admin') navigate('/admin');
-    else if (role === 'livreur') navigate('/livreur');
-    else navigate('/');
+    try {
+      setLoading(true);
+      setError('');
+      
+      // 1. Create Auth User
+      const { data, error: signupError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            name: 'Administrateur Principal',
+            role: 'admin'
+          }
+        }
+      });
+
+      if (signupError) throw signupError;
+
+      if (data.user) {
+        // 2. Insert/Upsert into users table
+        const { error: profileError } = await supabase.from('users').upsert({
+          id: data.user.id,
+          name: 'Administrateur Principal',
+          email: formData.email,
+          role: 'admin'
+        });
+
+        if (profileError) throw profileError;
+        alert("Succès : Le compte Admin réel a été initialisé dans la base de données. Vous pouvez maintenant vous connecter.");
+      }
+    } catch (err: any) {
+      setError("Erreur d'initialisation Admin : " + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -238,34 +246,15 @@ export const LoginScreen: React.FC = () => {
             >
               {mode === 'login' ? 'Se connecter' : 'Créer un compte'}
             </button>
-          </div>
 
-          {/* DÉMO QUICK BYPASS SECTION */}
-          <div className="flex flex-col gap-3 pt-4 border-t border-brand-outline/10">
-            <p className="text-center text-xs font-black tracking-widest text-brand-primary uppercase">Accès Démo Instantané</p>
-            <div className="grid grid-cols-3 gap-2">
+            {mode === 'login' && (
               <button 
-                onClick={() => handleDemoLogin('admin')}
-                className="py-2.5 px-1 bg-brand-surface-low border border-brand-outline/20 rounded-xl font-black text-[11px] text-brand-on-surface hover:bg-brand-primary hover:text-white transition-all flex flex-col items-center justify-center gap-1 active:scale-95 shadow-sm"
+                onClick={handleBootstrapAdmin}
+                className="text-[10px] font-black text-brand-primary uppercase tracking-widest opacity-40 hover:opacity-100 transition-opacity mt-2"
               >
-                <Shield size={16} />
-                Admin
+                Initialiser le premier compte Admin réel
               </button>
-              <button 
-                onClick={() => handleDemoLogin('livreur')}
-                className="py-2.5 px-1 bg-brand-surface-low border border-brand-outline/20 rounded-xl font-black text-[11px] text-brand-on-surface hover:bg-brand-primary hover:text-white transition-all flex flex-col items-center justify-center gap-1 active:scale-95 shadow-sm"
-              >
-                <Bike size={16} />
-                Livreur
-              </button>
-              <button 
-                onClick={() => handleDemoLogin('client')}
-                className="py-2.5 px-1 bg-brand-surface-low border border-brand-outline/20 rounded-xl font-black text-[11px] text-brand-on-surface hover:bg-brand-primary hover:text-white transition-all flex flex-col items-center justify-center gap-1 active:scale-95 shadow-sm"
-              >
-                <Users size={16} />
-                Client
-              </button>
-            </div>
+            )}
           </div>
 
           <div className="flex items-center gap-4">
