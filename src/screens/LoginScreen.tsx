@@ -79,7 +79,7 @@ export const LoginScreen: React.FC = () => {
       setLoading(true);
       setError('');
       
-      // 1. Create Auth User
+      // 1. Try to register
       const { data, error: signupError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -91,19 +91,37 @@ export const LoginScreen: React.FC = () => {
         }
       });
 
-      if (signupError) throw signupError;
+      let userId = data?.user?.id;
 
-      if (data.user) {
-        // 2. Insert/Upsert into users table
+      // 2. If already registered, try to sign in to get the ID
+      if (signupError) {
+        if (signupError.message.includes('already registered')) {
+          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+            email: formData.email,
+            password: formData.password
+          });
+          
+          if (signInError) throw signInError;
+          userId = signInData?.user?.id;
+        } else {
+          throw signupError;
+        }
+      }
+
+      if (userId) {
+        // 3. Force update/upsert into users table as admin
         const { error: profileError } = await supabase.from('users').upsert({
-          id: data.user.id,
+          id: userId,
           name: 'Administrateur Principal',
           email: formData.email,
           role: 'admin'
         });
 
         if (profileError) throw profileError;
-        alert("Succès : Le compte Admin réel a été initialisé dans la base de données. Vous pouvez maintenant vous connecter.");
+        alert("Succès : Votre compte a été promu au rang d'ADMINISTRATEUR. Vous pouvez maintenant accéder au tableau de bord.");
+        
+        // Refresh session to apply changes
+        window.location.reload();
       }
     } catch (err: any) {
       setError("Erreur d'initialisation Admin : " + err.message);

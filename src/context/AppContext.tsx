@@ -146,10 +146,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
 
     const restoreSession = async () => {
-      // Sécurité : même si Supabase met trop de temps, on libère l'écran après 3 secondes
+      // Sécurité : on libère l'écran après 1 seconde maximum
       const timeout = setTimeout(() => {
         dispatch({ type: 'SET_AUTH_CHECKED', payload: true });
-      }, 3000);
+      }, 1000);
 
       try {
         const { data, error } = await supabase.auth.getSession();
