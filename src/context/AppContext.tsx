@@ -146,8 +146,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
 
     const restoreSession = async () => {
+      // Sécurité : même si Supabase met trop de temps, on libère l'écran après 3 secondes
+      const timeout = setTimeout(() => {
+        dispatch({ type: 'SET_AUTH_CHECKED', payload: true });
+      }, 3000);
+
       try {
-        const { data } = await supabase.auth.getSession();
+        const { data, error } = await supabase.auth.getSession();
+        if (error) throw error;
+        
         if (data.session?.user) {
           const userProfile = await loadUserProfile(data.session.user);
           dispatch({ type: 'SET_USER', payload: userProfile });
@@ -156,6 +163,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       } catch (err) {
         console.error("Failed to restore session", err);
       } finally {
+        clearTimeout(timeout);
         dispatch({ type: 'SET_AUTH_CHECKED', payload: true });
       }
     };

@@ -2,5 +2,7 @@
   "name": "SolutionX",
   "description": "Une plateforme communautaire connectée pour gérer vos services résidentiels, courses et artisans en toute sérénité.",
   "requestFramePermissions": [],
-  "majorCapabilities": []
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }
