@@ -33,11 +33,15 @@ async function loadUserProfile(authUser: any): Promise<User> {
   const metadata = authUser.user_metadata || {};
   
   try {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('users')
       .select('*')
       .eq('id', authUser.id)
       .maybeSingle();
+
+    if (error) {
+      console.error("[Auth] Database error loading profile:", error);
+    }
 
     if (data) {
       return {
@@ -50,10 +54,11 @@ async function loadUserProfile(authUser: any): Promise<User> {
       };
     }
   } catch (err) {
-    console.error("Failed to load user profile from DB", err);
+    console.error("[Auth] Exception loading profile:", err);
   }
 
-  // Fallback to metadata
+  // Fallback to metadata if DB record is missing or fails
+  console.log("[Auth] Using metadata fallback for user:", authUser.email);
   return {
     id: authUser.id,
     name: metadata.name || authUser.email?.split('@')[0] || 'Utilisateur',
@@ -148,45 +153,25 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const restoreSession = async () => {
       console.log("[Auth] Starting session restoration...");
       
-      // On débloque l'UI en parallèle de la récupération du profil pour éviter le chargement infini
-      // On fixe un délai maximum raisonnable
-      const safetyUnlock = setTimeout(() => {
-        dispatch({ type: 'SET_AUTH_CHECKED', payload: true });
-      }, 3000);
-
       try {
         const { data, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error("[Auth] Session fetch error:", error);
-          dispatch({ type: 'SET_AUTH_CHECKED', payload: true });
           return;
         }
 
         if (data.session?.user) {
           console.log("[Auth] Session found for user:", data.session.user.email);
-          try {
-            // On charge le profil mais on n'attend pas forcément indéfiniment
-            const profilePromise = loadUserProfile(data.session.user);
-            const userProfile = await Promise.race([
-              profilePromise,
-              new Promise<null>((_, reject) => setTimeout(() => reject(new Error("Timeout Profile")), 4000))
-            ]);
-            
-            if (userProfile) {
-              dispatch({ type: 'SET_USER', payload: userProfile as User });
-              fetchUserOrders(data.session.user.id).catch(e => console.warn("Orders fetch failed", e));
-            }
-          } catch (profileErr) {
-            console.error("[Auth] User profile loading took too long or failed:", profileErr);
-          }
+          const userProfile = await loadUserProfile(data.session.user);
+          dispatch({ type: 'SET_USER', payload: userProfile });
+          fetchUserOrders(data.session.user.id).catch(e => console.warn("Orders fetch failed", e));
         } else {
           console.log("[Auth] No active session found");
         }
       } catch (err) {
         console.error("[Auth] Critical failure in restoreSession:", err);
       } finally {
-        clearTimeout(safetyUnlock);
         dispatch({ type: 'SET_AUTH_CHECKED', payload: true });
         console.log("[Auth] Initial Auth Check Finished");
       }
@@ -195,18 +180,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     restoreSession();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      try {
+      console.log("[Auth] State Change Event:", event);
+      
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         if (session?.user) {
           const userProfile = await loadUserProfile(session.user);
           dispatch({ type: 'SET_USER', payload: userProfile });
-          await fetchUserOrders(session.user.id);
-        } else {
-          dispatch({ type: 'SET_USER', payload: null });
-          dispatch({ type: 'SET_ORDERS', payload: [] });
+          fetchUserOrders(session.user.id).catch(e => console.warn("Orders fetch failed", e));
         }
-      } catch (err) {
-        console.error("Error on auth state change", err);
-      } finally {
+        dispatch({ type: 'SET_AUTH_CHECKED', payload: true });
+      } else if (event === 'SIGNED_OUT') {
+        dispatch({ type: 'SET_USER', payload: null });
+        dispatch({ type: 'SET_ORDERS', payload: [] });
         dispatch({ type: 'SET_AUTH_CHECKED', payload: true });
       }
     });

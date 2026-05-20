@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { User, Home, Lock, Eye, CheckCircle2, Shield, Bike, Users } from 'lucide-react';
+import { User, Home, Lock, Eye, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { supabase } from '../lib/supabase';
@@ -19,6 +19,22 @@ export const LoginScreen: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const getRoleHomeRoute = (role?: string) => {
+    switch (role) {
+      case 'admin':
+      case 'agent':
+        return '/admin';
+      case 'boutique':
+        return '/boutique';
+      case 'livreur':
+        return '/livreur';
+      case 'artisan':
+        return '/artisan';
+      default:
+        return '/';
+    }
+  };
 
   const handleSubmit = async () => {
     setError('');
@@ -39,34 +55,31 @@ export const LoginScreen: React.FC = () => {
         });
 
         if (authError) {
-          if (authError.message.includes('Failed to fetch')) {
-            setError("Erreur de connexion : Vérifiez votre connexion internet.");
-          } else {
-            setError("Identifiants incorrects : " + authError.message);
-          }
+          setError("Identifiants incorrects : " + authError.message);
           setLoading(false);
           return;
         }
 
         if (authData?.user) {
-          const userMetadata = authData.user.user_metadata;
-          // Redirection basée sur le rôle stocké dans la base Supabase
-          if (userMetadata?.role === 'admin') {
-            window.location.href = '/admin';
-          } else {
-            navigate('/');
-          }
+          // On laisse AppContext gérer la redirection via l'état global ou on redirige ici
+          // Pour être sûr, on récupère le rôle des métadonnées ou de la base
+          const role = authData.user.user_metadata?.role || 'client';
+          navigate(getRoleHomeRoute(role));
           return;
         }
       } else {
-        const { error: authError } = await supabase.auth.signUp({
+        // Logique spéciale pour l'inscription : si l'email contient 'admin', on lui donne le rôle admin (pour test/bootstrap)
+        const isInitialAdmin = formData.email.toLowerCase().includes('admin@citeconnect.com') || formData.email.toLowerCase() === 'amavkingofficielle@gamil.com';
+        const role = isInitialAdmin ? 'admin' : 'client';
+
+        const { data: signUpData, error: authError } = await supabase.auth.signUp({
           email: formData.email.trim(),
           password: formData.password,
           options: {
             data: {
               name: formData.name,
-              houseNumber: formData.houseNumber,
-              role: 'client' // Par défaut tout le monde est client
+              houseNumber: formData.houseNumber || 'HQ',
+              role: role
             },
           },
         });
@@ -231,23 +244,6 @@ export const LoginScreen: React.FC = () => {
             </button>
 
             </div>
-
-          <div className="flex items-center gap-4">
-            <div className="h-px flex-1 bg-brand-outline/10" />
-            <span className="text-xs font-bold text-brand-outline uppercase tracking-widest">OU</span>
-            <div className="h-px flex-1 bg-brand-outline/10" />
-          </div>
-
-          <div className="flex gap-4">
-            <button className="flex-1 flex items-center justify-center gap-2 h-14 border border-brand-outline/20 rounded-2xl hover:bg-brand-surface-low transition-colors font-bold text-sm">
-              <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuAky92BE6dlB6yWmUMVZ2ebne6JU81TmDgNNhu9RYz3IcUHSOZCqOttEYNhaU_OoGEQP2zXjQ8OTfhLaoQ6zpKQIpk92mXcZI25niPX2oEYiP39zZh7-lU7-HJ0D8TrpK9Ab__s5EIOO36MXqYrxIlML_K7JmyHoqxtDQfWmqL_Iad079dHqj2AuE6ZVURGuyp9ftnFAHNW1ef-N83l1tdWluziRDxVk-gL3-eUGRjyQyMO8gkuiPke_nC0IM30WXDDX7MkjM9b-8FV" alt="Google" className="w-5 h-5" />
-              Google
-            </button>
-            <button className="flex-1 flex items-center justify-center gap-2 h-14 border border-brand-outline/20 rounded-2xl hover:bg-brand-surface-low transition-colors font-bold text-sm">
-              <span className="text-[#1877F2] font-black text-xl leading-none">f</span>
-              Facebook
-            </button>
-          </div>
 
           <p className="text-center text-sm font-medium text-brand-on-surface-variant">
             {mode === 'login' ? 'Pas encore de compte ?' : 'Vous avez déjà un compte ?'}
