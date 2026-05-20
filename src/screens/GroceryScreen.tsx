@@ -76,7 +76,7 @@ export const GroceryScreen: React.FC = () => {
           <div className="w-10 h-10 rounded-full bg-brand-primary-fixed overflow-hidden flex items-center justify-center text-brand-primary">
             <img src={state.user?.avatar || "https://lh3.googleusercontent.com/aida-public/AB6AXuAgGuMREuc2sBVsLkVQZ0N0VxnF2YJZXQfbTOE7j5GGHVoadnlOTqO58GwMpUnBC9yq6ABwjfGPBzmpBzHJr_NRK-UknmQAJ1GjaHvtxgqs7HONsP7ojPsYGeOXhQzmEwF2AB8dM8CWgg_qgyzrp1r7PyJQJRjwDBokgXV60uUX88o6jVGZTed2wF-Z4cGXMYvBgEE1AK9orkYSODC3inRRqegq5tTbkQQU-2j5AN_yAgXqR4d2_7pj50a0sJXWHrDZK5W2kMCWtHL3"} alt="Profile" className="w-full h-full object-cover" />
           </div>
-          <h1 className="text-xl font-bold text-brand-primary tracking-tight">SolutionX</h1>
+          <h1 className="text-xl font-bold text-brand-primary tracking-tight">Cité Connect</h1>
         </div>
         
         <div className="flex items-center gap-3">

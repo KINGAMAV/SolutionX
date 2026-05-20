@@ -73,7 +73,7 @@ export const ArtisansScreen: React.FC = () => {
               className="w-full h-full object-cover" 
             />
           </div>
-          <h1 className="text-xl font-bold text-brand-primary tracking-tight">SolutionX</h1>
+          <h1 className="text-xl font-bold text-brand-primary tracking-tight">Cité Connect</h1>
         </div>
         <button className="text-brand-primary p-2 rounded-full hover:bg-brand-surface-variant/50">
           <Bell size={24} />

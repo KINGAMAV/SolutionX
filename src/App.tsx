@@ -28,8 +28,11 @@ import { ArtisanDashboard } from './screens/artisan/ArtisanDashboard';
 import { UserRole } from './types';
 
 const LoadingScreen = () => (
-  <div className="min-h-screen flex items-center justify-center bg-brand-background text-brand-primary">
-    Chargement...
+  <div className="min-h-screen flex flex-col items-center justify-center bg-brand-background">
+    <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-md mb-4 border-2 border-brand-primary/10 overflow-hidden p-1">
+      <img src="/logo.png" className="w-full h-full object-contain animate-pulse" alt="Logo" />
+    </div>
+    <div className="text-brand-primary font-bold animate-pulse text-sm">Cité Connect</div>
   </div>
 );
 

@@ -1,15 +1,19 @@
 import { type LucideIcon } from 'lucide-react';
 
+export type UserRole = 'client' | 'artisan' | 'boutique' | 'livreur' | 'agent' | 'admin';
+
 export interface User {
   id: string;
   name: string;
   email: string;
   houseNumber: string;
   avatar: string;
+  role: UserRole;
 }
 
 export interface Artisan {
   id: string;
+  userId?: string;
   name: string;
   category: string;
   experience: number;
@@ -19,6 +23,18 @@ export interface Artisan {
   specialty: string;
   zones: string[];
   avatar: string;
+}
+
+export interface Boutique {
+  id: string;
+  userId?: string;
+  ownerId?: string;
+  name: string;
+  category: string;
+  address?: string;
+  rating: number;
+  image?: string;
+  logo?: string;
 }
 
 export interface Product {
@@ -38,11 +54,16 @@ export interface OrderItem {
   quantity: number;
 }
 
-export type OrderStatus = 'confirmed' | 'preparing' | 'ready' | 'delivering' | 'delivered';
+export type OrderStatus = 'confirmed' | 'preparing' | 'ready' | 'delivering' | 'delivered' | 'cancelled';
 
 export interface Order {
   id: string;
+  userId: string;
+  boutiqueId?: string;
+  livreurId?: string;
+  artisanId?: string;
   status: OrderStatus;
+  paymentStatus: 'pending' | 'paid';
   items: OrderItem[];
   total: number;
   deliveryFee: number;

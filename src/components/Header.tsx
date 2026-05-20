@@ -8,13 +8,17 @@ interface HeaderProps {
   userAvatar?: string;
 }
 
-export const Header: React.FC<HeaderProps> = ({ title = 'SolutionX', userAvatar }) => {
+export const Header: React.FC<HeaderProps> = ({ title = 'Cité Connect', userAvatar }) => {
   return (
     <header className="bg-brand-surface shadow-sm flex justify-between items-center w-full px-5 h-16 sticky top-0 z-50">
       <div className="flex items-center gap-3">
-        {userAvatar && (
+        {userAvatar ? (
           <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-brand-primary/20 bg-brand-surface-highest">
             <img src={userAvatar} alt="Profile" className="w-full h-full object-cover" />
+          </div>
+        ) : (
+          <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-brand-primary/20 bg-white p-1">
+            <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
           </div>
         )}
         <h1 className="text-xl font-bold text-brand-primary tracking-tight">

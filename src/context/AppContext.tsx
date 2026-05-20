@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
-import { User, Order, OrderItem, Artisan } from '../types';
+import { User, Order, OrderItem, Artisan, UserRole } from '../types';
 import { supabase } from '../lib/supabase';
 
 interface AppState {
@@ -33,11 +33,11 @@ async function loadUserProfile(authUser: any): Promise<User> {
   const metadata = authUser.user_metadata || {};
   
   try {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('users')
       .select('*')
       .eq('id', authUser.id)
-      .single();
+      .maybeSingle();
 
     if (data) {
       return {
@@ -46,7 +46,7 @@ async function loadUserProfile(authUser: any): Promise<User> {
         email: data.email,
         houseNumber: data.house_number || '',
         avatar: data.avatar || metadata.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=100',
-        role: data.role as import('../types').UserRole,
+        role: (data.role || metadata.role || 'client') as UserRole,
       };
     }
   } catch (err) {
@@ -60,7 +60,7 @@ async function loadUserProfile(authUser: any): Promise<User> {
     email: authUser.email || '',
     houseNumber: metadata.houseNumber || '',
     avatar: metadata.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=100',
-    role: (metadata.role as import('../types').UserRole) || 'client',
+    role: (metadata.role as UserRole) || 'client',
   };
 }
 
@@ -146,25 +146,49 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
 
     const restoreSession = async () => {
-      // Sécurité : on libère l'écran après 1 seconde maximum
-      const timeout = setTimeout(() => {
+      console.log("[Auth] Starting session restoration...");
+      
+      // On débloque l'UI en parallèle de la récupération du profil pour éviter le chargement infini
+      // On fixe un délai maximum raisonnable
+      const safetyUnlock = setTimeout(() => {
         dispatch({ type: 'SET_AUTH_CHECKED', payload: true });
-      }, 1000);
+      }, 3000);
 
       try {
         const { data, error } = await supabase.auth.getSession();
-        if (error) throw error;
         
+        if (error) {
+          console.error("[Auth] Session fetch error:", error);
+          dispatch({ type: 'SET_AUTH_CHECKED', payload: true });
+          return;
+        }
+
         if (data.session?.user) {
-          const userProfile = await loadUserProfile(data.session.user);
-          dispatch({ type: 'SET_USER', payload: userProfile });
-          await fetchUserOrders(data.session.user.id);
+          console.log("[Auth] Session found for user:", data.session.user.email);
+          try {
+            // On charge le profil mais on n'attend pas forcément indéfiniment
+            const profilePromise = loadUserProfile(data.session.user);
+            const userProfile = await Promise.race([
+              profilePromise,
+              new Promise<null>((_, reject) => setTimeout(() => reject(new Error("Timeout Profile")), 4000))
+            ]);
+            
+            if (userProfile) {
+              dispatch({ type: 'SET_USER', payload: userProfile as User });
+              fetchUserOrders(data.session.user.id).catch(e => console.warn("Orders fetch failed", e));
+            }
+          } catch (profileErr) {
+            console.error("[Auth] User profile loading took too long or failed:", profileErr);
+          }
+        } else {
+          console.log("[Auth] No active session found");
         }
       } catch (err) {
-        console.error("Failed to restore session", err);
+        console.error("[Auth] Critical failure in restoreSession:", err);
       } finally {
-        clearTimeout(timeout);
+        clearTimeout(safetyUnlock);
         dispatch({ type: 'SET_AUTH_CHECKED', payload: true });
+        console.log("[Auth] Initial Auth Check Finished");
       }
     };
 

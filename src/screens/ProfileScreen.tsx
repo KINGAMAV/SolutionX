@@ -22,7 +22,7 @@ export const ProfileScreen: React.FC = () => {
       className="bg-brand-background min-h-screen pb-32"
     >
       <header className="bg-brand-surface shadow-sm h-16 flex justify-between items-center px-5 sticky top-0 z-50">
-        <h1 className="text-xl font-black text-brand-primary tracking-tight">SolutionX</h1>
+        <h1 className="text-xl font-black text-brand-primary tracking-tight">Cité Connect</h1>
         <button className="p-2 text-brand-primary active:scale-95 transition-transform">
           <Bell size={24} />
         </button>

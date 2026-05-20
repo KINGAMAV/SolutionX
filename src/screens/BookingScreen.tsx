@@ -121,7 +121,7 @@ export const BookingScreen: React.FC = () => {
           <div className="flex items-start gap-4 bg-brand-surface-low p-6 rounded-[2rem] border border-brand-primary/5">
             <Info size={24} className="text-brand-primary shrink-0" />
             <p className="text-[11px] font-bold text-brand-on-surface-variant leading-relaxed uppercase tracking-wider opacity-70">
-              Coordonnées visibles après acceptation par le prestataire. Sécurité et confidentialité garanties par SolutionX.
+              Coordonnées visibles après acceptation par le prestataire. Sécurité et confidentialité garanties par Cité Connect.
             </p>
           </div>
         </div>

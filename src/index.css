@@ -3,22 +3,22 @@
 @theme {
   --font-sans: "Quicksand", ui-sans-serif, system-ui, sans-serif;
   
-  --color-brand-primary: #964900;
-  --color-brand-primary-container: #f57c00;
-  --color-brand-secondary: #7e5700;
-  --color-brand-secondary-container: #feb300;
-  --color-brand-background: #fff8f5;
-  --color-brand-surface: #fff8f5;
-  --color-brand-on-surface: #241912;
-  --color-brand-on-surface-variant: #574235;
-  --color-brand-outline: #8b7263;
-  --color-brand-error: #ba1a1a;
-  --color-brand-surface-lowest: #ffffff;
-  --color-brand-surface-low: #fff1ea;
-  --color-brand-surface-highest: #f4ded2;
-  --color-brand-surface-variant: #f4ded2;
-  --color-brand-tertiary: #586062;
-  --color-brand-secondary-fixed: #ffdeac;
+  --color-brand-primary: #00843D;
+  --color-brand-primary-container: #83CC9B;
+  --color-brand-secondary: #003366;
+  --color-brand-secondary-container: #E3E9F2;
+  --color-brand-background: #F5F5F5;
+  --color-brand-surface: #FFFFFF;
+  --color-brand-on-surface: #191A19;
+  --color-brand-on-surface-variant: #4E514F;
+  --color-brand-outline: #A9B3AC;
+  --color-brand-error: #BA1A1A;
+  --color-brand-surface-lowest: #FFFFFF;
+  --color-brand-surface-low: #F0F4F1;
+  --color-brand-surface-highest: #DDE4DF;
+  --color-brand-surface-variant: #DDE4DF;
+  --color-brand-tertiary: #1B4332;
+  --color-brand-secondary-fixed: #B7E4C7;
 
   --radius-xl: 0.75rem;
   --radius-2xl: 1rem;

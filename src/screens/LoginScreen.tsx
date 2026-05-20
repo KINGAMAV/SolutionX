@@ -17,10 +17,12 @@ export const LoginScreen: React.FC = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
     setError('');
+    setSuccess('');
     setLoading(true);
 
     if (!formData.email || !formData.password || (mode === 'signup' && !formData.name)) {
@@ -29,103 +31,58 @@ export const LoginScreen: React.FC = () => {
       return;
     }
 
-    if (mode === 'login') {
-      const { error: authError } = await supabase.auth.signInWithPassword({
-        email: formData.email,
-        password: formData.password,
-      });
-
-      if (authError) {
-        if (authError.message.includes('Failed to fetch')) {
-          setError("Erreur de connexion : Vérifiez que 'VITE_SUPABASE_URL' et 'VITE_SUPABASE_ANON_KEY' sont bien configurés dans les Secrets de AI Studio.");
-        } else {
-          setError(authError.message);
-        }
-        setLoading(false);
-        return;
-      }
-    } else {
-      const { error: authError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
-            name: formData.name,
-            houseNumber: formData.houseNumber,
-            role: 'client'
-          },
-        },
-      });
-
-      if (authError) {
-        setError(authError.message);
-        setLoading(false);
-        return;
-      }
-      
-      setError('Inscription réussie !');
-    }
-
-    setLoading(false);
-  };
-
-  const handleBootstrapAdmin = async () => {
-    if (!formData.email || !formData.password) {
-      setError("Entrez un email et un mot de passe pour le compte admin.");
-      return;
-    }
-    
     try {
-      setLoading(true);
-      setError('');
-      
-      // 1. Try to register
-      const { data, error: signupError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
-            name: 'Administrateur Principal',
-            role: 'admin'
-          }
-        }
-      });
-
-      let userId = data?.user?.id;
-
-      // 2. If already registered, try to sign in to get the ID
-      if (signupError) {
-        if (signupError.message.includes('already registered')) {
-          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-            email: formData.email,
-            password: formData.password
-          });
-          
-          if (signInError) throw signInError;
-          userId = signInData?.user?.id;
-        } else {
-          throw signupError;
-        }
-      }
-
-      if (userId) {
-        // 3. Force update/upsert into users table as admin
-        const { error: profileError } = await supabase.from('users').upsert({
-          id: userId,
-          name: 'Administrateur Principal',
-          email: formData.email,
-          role: 'admin'
+      if (mode === 'login') {
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+          email: formData.email.trim(),
+          password: formData.password,
         });
 
-        if (profileError) throw profileError;
-        alert("Succès : Votre compte a été promu au rang d'ADMINISTRATEUR. Vous pouvez maintenant accéder au tableau de bord.");
+        if (authError) {
+          if (authError.message.includes('Failed to fetch')) {
+            setError("Erreur de connexion : Vérifiez votre connexion internet.");
+          } else {
+            setError("Identifiants incorrects : " + authError.message);
+          }
+          setLoading(false);
+          return;
+        }
+
+        if (authData?.user) {
+          const userMetadata = authData.user.user_metadata;
+          // Redirection basée sur le rôle stocké dans la base Supabase
+          if (userMetadata?.role === 'admin') {
+            window.location.href = '/admin';
+          } else {
+            navigate('/');
+          }
+          return;
+        }
+      } else {
+        const { error: authError } = await supabase.auth.signUp({
+          email: formData.email.trim(),
+          password: formData.password,
+          options: {
+            data: {
+              name: formData.name,
+              houseNumber: formData.houseNumber,
+              role: 'client' // Par défaut tout le monde est client
+            },
+          },
+        });
+
+        if (authError) {
+          setError(authError.message);
+          setLoading(false);
+          return;
+        }
         
-        // Refresh session to apply changes
-        window.location.reload();
+        setSuccess('Inscription réussie ! Vous pouvez maintenant vous connecter.');
+        setMode('login');
+        setLoading(false);
       }
     } catch (err: any) {
-      setError("Erreur d'initialisation Admin : " + err.message);
-    } finally {
+      setError("Une erreur inattendue est survenue : " + err.message);
       setLoading(false);
     }
   };
@@ -142,10 +99,14 @@ export const LoginScreen: React.FC = () => {
           animate={{ y: 0, opacity: 1 }}
           className="relative z-10 flex flex-col items-center text-center px-5"
         >
-          <div className="w-20 h-20 bg-brand-primary rounded-[2rem] flex items-center justify-center shadow-xl mb-4">
-            <span className="text-white text-4xl font-black">S</span>
+          <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-xl mb-4 p-1 overflow-hidden">
+            <img 
+              src="/logo.png" 
+              alt="Cité Connect Logo" 
+              className="w-full h-full object-contain"
+            />
           </div>
-          <h1 className="text-3xl font-black text-brand-primary tracking-tight">SolutionX</h1>
+          <h1 className="text-3xl font-black text-brand-primary tracking-tight">Cité Connect</h1>
           <p className="text-sm font-medium text-brand-on-surface-variant max-w-[280px] mt-2">
             Votre communauté, connectée et sécurisée au quotidien.
           </p>
@@ -254,7 +215,11 @@ export const LoginScreen: React.FC = () => {
             </div>
 
             {error && (
-              <p className="text-sm text-red-500 font-medium">{error}</p>
+              <p className="text-sm text-red-500 font-bold bg-red-50 p-3 rounded-xl border border-red-100">{error}</p>
+            )}
+
+            {success && (
+              <p className="text-sm text-green-600 font-bold bg-green-50 p-3 rounded-xl border border-green-100">{success}</p>
             )}
 
             <button 
@@ -262,18 +227,10 @@ export const LoginScreen: React.FC = () => {
               disabled={loading}
               className="w-full h-14 mt-4 bg-brand-primary text-white rounded-2xl font-bold shadow-lg active:scale-95 transition-all text-lg disabled:opacity-60"
             >
-              {mode === 'login' ? 'Se connecter' : 'Créer un compte'}
+              {loading ? 'Chargement...' : (mode === 'login' ? 'Se connecter' : 'Créer un compte')}
             </button>
 
-            {mode === 'login' && (
-              <button 
-                onClick={handleBootstrapAdmin}
-                className="text-[10px] font-black text-brand-primary uppercase tracking-widest opacity-40 hover:opacity-100 transition-opacity mt-2"
-              >
-                Initialiser le premier compte Admin réel
-              </button>
-            )}
-          </div>
+            </div>
 
           <div className="flex items-center gap-4">
             <div className="h-px flex-1 bg-brand-outline/10" />
@@ -306,7 +263,7 @@ export const LoginScreen: React.FC = () => {
 
       <footer className="mt-8 mb-8 flex items-center justify-center gap-2 text-brand-outline opacity-60">
         <CheckCircle2 size={16} fill="currentColor" className="text-white" />
-        <span className="text-[10px] font-bold uppercase tracking-widest">Système sécurisé par SolutionX Architecture</span>
+        <span className="text-[10px] font-bold uppercase tracking-widest">Système sécurisé par Cité Connect Architecture</span>
       </footer>
     </div>
   );

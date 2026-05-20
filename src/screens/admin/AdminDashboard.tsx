@@ -522,7 +522,7 @@ export const AdminDashboard: React.FC = () => {
           </div>
           <div>
             <h1 className="font-black text-brand-primary text-sm leading-none">{isAgent ? "Agent Dispatcher" : "Admin Panel"}</h1>
-            <p className="text-[9px] font-bold text-brand-on-surface-variant uppercase mt-0.5">CitéConnect</p>
+            <p className="text-[9px] font-bold text-brand-on-surface-variant uppercase mt-0.5">Cité Connect</p>
           </div>
         </div>
         <button 
@@ -538,11 +538,11 @@ export const AdminDashboard: React.FC = () => {
         <div className="p-6">
           <div className="flex items-center gap-3">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg ${isAgent ? 'bg-brand-tertiary shadow-brand-tertiary/10' : 'bg-brand-primary shadow-brand-primary/10'}`}>
-              <Shield className="text-white animate-pulse" size={20} />
+              <img src="/logo.png" className="w-full h-full object-contain p-1" alt="Logo" />
             </div>
             <div>
               <h1 className="font-black text-brand-primary text-lg leading-none">{isAgent ? "Agent Dispatcher" : "Admin Panel"}</h1>
-              <p className="text-[9px] font-bold text-brand-on-surface-variant tracking-wider uppercase mt-1">CitéConnect Platform</p>
+              <p className="text-[9px] font-bold text-brand-on-surface-variant tracking-wider uppercase mt-1">Plateforme Cité Connect</p>
             </div>
           </div>
         </div>
@@ -603,7 +603,7 @@ export const AdminDashboard: React.FC = () => {
 
         {loading && (
           <div className="text-center py-4 bg-brand-surface-low rounded-2xl font-bold text-brand-primary mb-6 animate-pulse">
-            Chargement des données en direct...
+            Chargement des données Cité Connect en direct...
           </div>
         )}
 
@@ -622,7 +622,7 @@ export const AdminDashboard: React.FC = () => {
                 <div className="flex justify-between items-center">
                   <div>
                     <h2 className="text-3xl font-black text-brand-on-surface tracking-tight">Bonjour, {state.user?.name || "Administrateur"}</h2>
-                    <p className="text-brand-on-surface-variant font-medium mt-1">Supervision de l'activité en temps réel de CitéConnect.</p>
+                    <p className="text-brand-on-surface-variant font-medium mt-1">Supervision de l'activité en temps réel.</p>
                   </div>
                 </div>
                 

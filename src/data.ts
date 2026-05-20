@@ -1,4 +1,23 @@
-import { type Artisan, type Product, type Order } from './types';
+import { type Artisan, type Product, type Order, type User } from './types';
+
+export const MOCK_USERS: User[] = [
+  {
+    id: 'u1',
+    name: 'Jean-Marc',
+    email: 'jean@example.com',
+    houseNumber: 'Villa 124',
+    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=100',
+    role: 'client'
+  },
+  {
+    id: 'u2',
+    name: 'Admin Principal',
+    email: 'admin@solutionx.ci',
+    houseNumber: 'HQ-01',
+    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=100',
+    role: 'admin'
+  }
+];
 
 export const ARTISANS: Artisan[] = [
   {
@@ -77,7 +96,9 @@ export const PRODUCTS: Product[] = [
 export const MOCK_ORDERS: Order[] = [
   {
     id: 'SOL-92834',
+    userId: 'u1',
     status: 'delivering',
+    paymentStatus: 'paid',
     items: [
       { id: '1', productId: 'p1', name: '2x Poulet Braisé ATTIÉKÉ', price: 12000, quantity: 2 },
       { id: '2', productId: 'p2', name: '1x Alloco (Format Large)', price: 2500, quantity: 1 }

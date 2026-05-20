@@ -3,9 +3,11 @@ import { motion } from 'framer-motion';
 import { Header } from '../components/Header';
 import { ShoppingBasket, Flame, Construction, Bike, Wallet, ChevronRight, Truck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useApp } from '../context/AppContext';
 
 export const HomeScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { state } = useApp();
 
   return (
     <motion.div 
@@ -13,12 +15,12 @@ export const HomeScreen: React.FC = () => {
       animate={{ opacity: 1 }}
       className="flex flex-col min-h-screen"
     >
-      <Header userAvatar="https://lh3.googleusercontent.com/aida-public/AB6AXuAgGuMREuc2sBVsLkVQZ0N0VxnF2YJZXQfbTOE7j5GGHVoadnlOTqO58GwMpUnBC9yq6ABwjfGPBzmpBzHJr_NRK-UknmQAJ1GjaHvtxgqs7HONsP7ojPsYGeOXhQzmEwF2AB8dM8CWgg_qgyzrp1r7PyJQJRjwDBokgXV60uUX88o6jVGZTed2wF-Z4cGXMYvBgEE1AK9orkYSODC3inRRqegq5tTbkQQU-2j5AN_yAgXqR4d2_7pj50a0sJXWHrDZK5W2kMCWtHL3" />
+      <Header userAvatar={state.user?.avatar} />
       
       <main className="px-5 pt-6 space-y-6">
         {/* Greeting */}
         <section>
-          <h1 className="text-2xl font-bold text-brand-on-surface">Bonjour, Jean-Marc</h1>
+          <h1 className="text-2xl font-bold text-brand-on-surface">Bonjour, {state.user?.name || 'Voisin'}</h1>
           <p className="text-brand-on-surface-variant font-medium">Ravi de vous revoir dans votre communauté.</p>
         </section>
 

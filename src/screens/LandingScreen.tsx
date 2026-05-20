@@ -29,7 +29,7 @@ export const LandingScreen: React.FC = () => {
           className="relative w-full aspect-square max-w-[320px] rounded-[3rem] overflow-hidden shadow-2xl border-4 border-white"
         >
           <img 
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuCXg-BRUsHCdIi8Ha7UBGAysVA0P7GgyKqyV81Kks0TAptgxv1himqZSyWd9YUjWh5ToWGtsfOM-_NDWH05xpOcEdc8Lx0bkeHpZpoCJYAcFw8pd6dXeQyLfk6j4PYmlKsKarRdql5SPCm0cGNeIkAm3alsID_eZqE1lSWWM8logLwR-1pO5yjc0wkiZjtbwdUjwxJgrrpI_fjjDVP_t-sAj9qhTPp2z-y4sdxufuGDe5bJywcaGnDHSJkaN7M34gvWe1_PP7rLlrtp" 
+            src="https://images.unsplash.com/photo-1521791136064-7986c2923216?auto=format&fit=crop&q=80&w=800" 
             alt="Community Welcome" 
             className="w-full h-full object-cover"
           />
@@ -41,7 +41,7 @@ export const LandingScreen: React.FC = () => {
           transition={{ delay: 0.2 }}
           className="space-y-3"
         >
-          <h1 className="text-3xl font-black text-brand-primary tracking-tight">Bienvenue sur SolutionX</h1>
+          <h1 className="text-3xl font-black text-brand-primary tracking-tight">Bienvenue sur Cité Connect</h1>
           <p className="text-lg font-medium text-brand-on-surface-variant">Votre cité connectée, vos services simplifiés.</p>
         </motion.div>
       </div>

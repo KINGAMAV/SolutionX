@@ -1,6 +1,6 @@
 {
-  "name": "SolutionX",
-  "description": "Une plateforme communautaire connectée pour gérer vos services résidentiels, courses et artisans en toute sérénité.",
+  "name": "Cité Connect",
+  "description": "Votre plateforme communautaire pour simplifier la vie quotidienne : services, courses et artisans au cœur de votre cité.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
