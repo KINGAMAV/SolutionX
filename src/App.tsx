@@ -58,10 +58,18 @@ const RequireRole: React.FC<{ children: React.ReactNode; allowedRoles: UserRole[
   const location = useLocation();
 
   if (!state.authChecked) return <LoadingScreen />;
-  if (!state.user) return <Navigate to="/login" state={{ from: location }} replace />;
+  
+  if (!state.user) {
+    // Éviter la boucle si on est déjà sur login ou welcome
+    if (location.pathname === '/login' || location.pathname === '/welcome') return <>{children}</>;
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
   
   if (!allowedRoles.includes(state.user.role)) {
-    return <Navigate to={getRoleHomeRoute(state.user.role)} replace />;
+    const target = getRoleHomeRoute(state.user.role);
+    // Éviter la redirection vers soi-même
+    if (location.pathname === target) return <>{children}</>;
+    return <Navigate to={target} replace />;
   }
 
   return <>{children}</>;

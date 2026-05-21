@@ -46,9 +46,9 @@ async function loadUserProfile(authUser: any): Promise<User> {
     if (data) {
       return {
         id: data.id,
-        name: data.name,
+        name: data.name || metadata.name || authUser.email?.split('@')[0] || 'Utilisateur',
         email: data.email,
-        houseNumber: data.house_number || '',
+        houseNumber: data.house_number || metadata.houseNumber || '',
         avatar: data.avatar || metadata.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=100',
         role: (data.role || metadata.role || 'client') as UserRole,
       };
@@ -168,6 +168,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           fetchUserOrders(data.session.user.id).catch(e => console.warn("Orders fetch failed", e));
         } else {
           console.log("[Auth] No active session found");
+          // Si pas de session, on doit quand même marquer l'auth comme checkée
         }
       } catch (err) {
         console.error("[Auth] Critical failure in restoreSession:", err);
