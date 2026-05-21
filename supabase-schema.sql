@@ -18,7 +18,7 @@ CREATE TABLE users (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
   email TEXT UNIQUE NOT NULL,
-  password_hash TEXT, -- Rendu optionnel car Supabase gère déjà les mots de passe
+  password_hash TEXT, 
   house_number TEXT NOT NULL DEFAULT '',
   avatar TEXT,
   role TEXT NOT NULL DEFAULT 'client' CHECK (role IN ('client', 'agent', 'admin', 'livreur', 'boutique', 'artisan')),
@@ -80,10 +80,13 @@ CREATE TABLE orders (
   delivery_fee INTEGER NOT NULL,
   payment_status TEXT NOT NULL DEFAULT 'pending' CHECK (payment_status IN ('pending', 'paid', 'failed')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  delivery_time TEXT
+  delivery_time TEXT,
+  items JSONB, -- Stockage dénormalisé pour l'affichage rapide
+  latitude DOUBLE PRECISION, -- Position du livreur en temps réel
+  longitude DOUBLE PRECISION
 );
 
--- Table des items de commande
+-- Table des items de commande (pour analyse détaillée)
 CREATE TABLE order_items (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   order_id TEXT REFERENCES orders(id) ON DELETE CASCADE,
@@ -122,14 +125,12 @@ CREATE TABLE parcel_deliveries (
 );
 
 -- Insertion des données de test
-
--- Utilisateurs de test
 INSERT INTO users (name, email, password_hash, house_number, role, avatar) VALUES
-('Jean-Marc', 'jeanmarc@example.com', '$2b$10$dummy.hash.for.demo', 'Villa 124', 'client', 'https://lh3.googleusercontent.com/aida-public/AB6AXuAgGuMREuc2sBVsLkVQZ0N0VxnF2YJZXQfbTOE7j5GGHVoadnlOTqO58GwMpUnBC9yq6ABwjfGPBzmpBzHJr_NRK-UknmQAJ1GjaHvtxgqs7HONsP7ojPsYGeOXhQzmEwF2AB8dM8CWgg_qgyzrp1r7PyJQJRjwDBokgXV60uUX88o6jVGZTed2wF-Z4cGXMYvBgEE1AK9orkYSODC3inRRqegq5tTbkQQU-2j5AN_yAgXqR4d2_7pj50a0sJXWHrDZK5W2kMCWtHL3'),
-('Admin Global', 'admin@example.com', '$2b$10$dummy.hash.for.demo', 'HQ', 'admin', NULL),
-('Agent Connect', 'agent@example.com', '$2b$10$dummy.hash.for.demo', 'HQ', 'agent', NULL),
-('Boutique Maquis', 'boutique@example.com', '$2b$10$dummy.hash.for.demo', 'Zone 4', 'boutique', NULL),
-('Moussa Livreur', 'livreur@example.com', '$2b$10$dummy.hash.for.demo', 'Cocody', 'livreur', 'https://lh3.googleusercontent.com/aida-public/AB6AXuCP5WWIGcnMzAqHjkVs78766LybBNTgzYfuy2ypdWigqLRvNeryJj7Wi_6v9RciTgLg2whU9lgg2sri2D4Hizh_650HyCIwKqQkpH-IoXZakbHCQv1Nn_zvR86KhC_pQULscsn0Z3iUp2hKgCKWpXjL_YJjunPm6QqWeepHcBHsM0dJDU4g05vJDUGd10v7HYBXHbTk4NoqiBR3j8V6z-LH8qpitBlcEFOqhsVTeQpPFjTXnkV9OnGmhOgpVEjCDE8r7ZncVfxHhrtj');
+('Jean-Marc', 'jeanmarc@example.com', NULL, 'Villa 124', 'client', 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=100'),
+('Admin Global', 'admin@example.com', NULL, 'HQ', 'admin', NULL),
+('Agent Connect', 'agent@example.com', NULL, 'HQ', 'agent', NULL),
+('Boutique Maquis', 'boutique@example.com', NULL, 'Zone 4', 'boutique', NULL),
+('Moussa Livreur', 'livreur@example.com', NULL, 'Cocody', 'livreur', 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&q=80&w=100');
 
 -- Boutiques de test
 INSERT INTO boutiques (owner_id, name, category, address) VALUES
@@ -137,20 +138,12 @@ INSERT INTO boutiques (owner_id, name, category, address) VALUES
 
 -- Artisans de test
 INSERT INTO artisans (name, category, experience, rating, hourly_rate, verified, specialty, zones, avatar) VALUES
-('Koffi Kouassi', 'Electricien', 12, 4.9, 15000, true, 'Expert Électricien', ARRAY['Cocody', 'Riviera', 'Bingerville'], 'https://lh3.googleusercontent.com/aida-public/AB6AXuBSjzHWp6PmNFxRSa7WNvGVem9xucSM89puNb3c8ODo-dFPiAzmRwKPGT0d0xtF8sMjt-kYgVegyTb4SlhyhEZkP6p9Q6TB9ftVfanSxjEz1NXna83L-ynDjjrCsm_rl5QjbVFvJUavjmHz897nM1-LBRiJqGGI97fiHTP8ApocaFzFrcC4zNk1A4CD8XcjWqlAoGYm5R7n8TMKebUPk6ltWwa_C5zlKxtNWkC7on5WXHpYWM2Psvu66o-lBURCJuHINQEVhvBUUmvA');
+('Koffi Kouassi', 'Electricien', 12, 4.9, 15000, true, 'Expert Électricien', ARRAY['Cocody', 'Riviera', 'Bingerville'], 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100');
 
 -- Produits de test
 INSERT INTO products (boutique_id, name, category, price, unit, image) VALUES
-((SELECT id FROM boutiques LIMIT 1), 'Sac de Riz (5kg)', 'Céréales', 4500, '5kg', 'https://lh3.googleusercontent.com/aida-public/AB6AXuDdhsrtZPXBCLLKZj-f8mHWNveZHN7GMZ-pm7voTVC9HPMqcD6avK_f6ZRYdE1YP-1pbP5Q3VWNDreOtqDquugXaoGjnXmzyaurnsOQbPqVAILvOVn_ITR3nzRSoS42cEOrRNt0iB6KjN1BKe46AGbpyYbOh6s2jDISJI1Q2EmtXJONp_MAu6pa-aUhY8mjXyrywOqUdZMjZRUjFqFSFluuXcK5G_NeTYwnRqQn4KIS0Sz1fepvn1BIt3cD6mINcXZqIJ0jFycsbWJg'),
-((SELECT id FROM boutiques LIMIT 1), 'Pack Eau Minérale (6x1.5L)', 'Boissons', 2500, 'Pack', 'https://lh3.googleusercontent.com/aida-public/AB6AXuC6KTrl7NDzMck2UcVkDF9Bp1hKukL3mCXpvM7mCWAuCm6d3Pmv8_kDyX2afwz5FNbbYPIaZMmm-vZ1GCvFzSNnoTUeSohEacjNmsDdVEoW5OCb07lQSBlILK92ToWnac2Z3Hzrn7PGE71Z35bfSw_UZPeDDtMuA9LJz0132Ma15cdlEsGraZV45NT-Q2df3hboR5DRgxdPk3dglCSfdHeAOVHMIG2zx6wh9E0GKvygfVZq4U_qKT4qivBO6NXmFT9cHHyOtHg5bYbo');
-
--- Commande de test
-INSERT INTO orders (id, user_id, boutique_id, livreur_id, status, total, delivery_fee, created_at, delivery_time) VALUES
-('SOL-92834', (SELECT id FROM users WHERE email = 'jeanmarc@example.com'), (SELECT id FROM boutiques LIMIT 1), (SELECT id FROM users WHERE email = 'livreur@example.com'), 'delivering', 16000, 1500, NOW(), '14:45');
-
--- Items de la commande de test
-INSERT INTO order_items (order_id, product_id, name, price, quantity) VALUES
-('SOL-92834', (SELECT id FROM products WHERE name = 'Sac de Riz (5kg)'), '2x Poulet Braisé ATTIÉKÉ', 12000, 2);
+((SELECT id FROM boutiques LIMIT 1), 'Sac de Riz (5kg)', 'Céréales', 4500, '5kg', 'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&q=80&w=100'),
+((SELECT id FROM boutiques LIMIT 1), 'Pack Eau Minérale (6x1.5L)', 'Boissons', 2500, 'Pack', 'https://images.unsplash.com/photo-1548919973-5cfe5d4fc494?auto=format&fit=crop&q=80&w=100');
 
 -- Politiques RLS (Row Level Security) pour Supabase
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;

@@ -43,7 +43,7 @@ export const LivreurDashboard: React.FC = () => {
   // Effet de simulation du mouvement en temps réel
   useEffect(() => {
     let intervalId: any;
-    if (isSharing && progress < 1) {
+    if (isSharing && progress < 1 && activeDelivery) {
       intervalId = setInterval(() => {
         setProgress((prev) => {
           const next = Math.min(prev + 0.05, 1);
@@ -51,12 +51,10 @@ export const LivreurDashboard: React.FC = () => {
           const currentSpeed = next >= 1 ? '0 km/h' : `${Math.floor(baseSpeed + Math.random() * 6)} km/h`;
           setSpeed(currentSpeed);
           
-          localStorage.setItem('livreur_position_SOL-92834', JSON.stringify({
-            progress: next,
-            speed: currentSpeed,
-            status: next >= 1 ? 'completed' : 'en_route',
-            lastUpdated: new Date().toLocaleTimeString()
-          }));
+          // Mise à jour GPS réelle en base
+          const lat = 5.3164 + next * 0.032;
+          const lng = -3.9875 - next * 0.014;
+          updateGPS(activeDelivery.id, lat, lng);
 
           if (next >= 1) {
             setIsSharing(false);
@@ -64,7 +62,7 @@ export const LivreurDashboard: React.FC = () => {
           }
           return next;
         });
-      }, 1000);
+      }, 3000); // Mise à jour toutes les 3 secondes pour économiser la batterie/base
     }
 
     return () => {
@@ -116,20 +114,20 @@ export const LivreurDashboard: React.FC = () => {
     });
   };
 
-  const handleMarkAsDelivered = () => {
-    setProgress(1);
-    setIsSharing(false);
-    setSpeed('0 km/h');
+  const handleMarkAsDelivered = async () => {
+    if (!activeDelivery) return;
     
-    localStorage.removeItem('livreur_position_SOL-92834');
-    
-    const order = MOCK_ORDERS.find(o => o.id === 'SOL-92834');
-    if (order) {
-      order.status = 'delivered';
-    }
+    const { error } = await supabase
+      .from('orders')
+      .update({ status: 'delivered' })
+      .eq('id', activeDelivery.id);
 
-    alert("Félicitations ! Commande marquée comme Livrée avec succès !");
-    navigate('/welcome');
+    if (!error) {
+      setProgress(1);
+      setIsSharing(false);
+      setSpeed('0 km/h');
+      alert("Félicitations ! Commande marquée comme Livrée avec succès !");
+    }
   };
 
   const handleVehicleChange = (type: 'velo' | 'moto' | 'voiture') => {
@@ -137,9 +135,66 @@ export const LivreurDashboard: React.FC = () => {
     localStorage.setItem('livreur_vehicle_SOL-92834', type);
   };
 
-  // Filtrer les commandes
-  const availableOrders = MOCK_ORDERS.filter(o => o.status !== 'delivered');
-  const activeDelivery = MOCK_ORDERS.find(o => o.livreurId === state.user?.id && o.status !== 'delivered');
+  // Gestion des commandes réelles
+  const [realOrders, setRealOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      setLoading(true);
+      const { data } = await supabase
+        .from('orders')
+        .select('*')
+        .neq('status', 'delivered')
+        .neq('status', 'cancelled')
+        .order('created_at', { ascending: false });
+      
+      if (data) setRealOrders(data);
+      setLoading(false);
+    };
+
+    fetchOrders();
+
+    const channel = supabase
+      .channel('livreur-orders')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          setRealOrders(prev => [payload.new, ...prev]);
+        } else if (payload.eventType === 'UPDATE') {
+          setRealOrders(prev => prev.map(o => o.id === payload.new.id ? payload.new : o).filter(o => o.status !== 'delivered' && o.status !== 'cancelled'));
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const availableOrders = realOrders.filter(o => !o.livreur_id && o.status === 'ready');
+  const activeDelivery = realOrders.find(o => o.livreur_id === state.user?.id);
+
+  const handleAcceptOrder = async (orderId: string) => {
+    const { error } = await supabase
+      .from('orders')
+      .update({ 
+        livreur_id: state.user?.id,
+        status: 'delivering'
+      })
+      .eq('id', orderId);
+    
+    if (error) alert("Erreur : " + error.message);
+  };
+
+  const updateGPS = async (orderId: string, lat: number, lng: number) => {
+    await supabase
+      .from('orders')
+      .update({ 
+        latitude: lat,
+        longitude: lng
+      })
+      .eq('id', orderId);
+  };
 
   // Données de revenus
   const dailyEarnings = [
@@ -434,10 +489,7 @@ export const LivreurDashboard: React.FC = () => {
                           <p className="text-xs font-medium text-brand-on-surface-variant">~ 4.2 km</p>
                         </div>
                         <button 
-                          onClick={() => {
-                            setActiveTab('active');
-                            handleStartDelivery();
-                          }}
+                          onClick={() => handleAcceptOrder(order.id)}
                           className="flex-1 md:flex-none border-2 border-brand-primary text-brand-primary hover:bg-brand-primary hover:text-white px-6 py-2.5 rounded-xl font-bold transition-colors"
                         >
                           Accepter la course

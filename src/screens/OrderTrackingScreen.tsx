@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Bell, MapPin, CheckCircle2, Utensils, Box, Bike, Home, Star, Compass } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { supabase } from '../lib/supabase';
 
 // Component drawing a gorgeous, simulated vector tracking map using SVG
 const VectorTrackingMap: React.FC<{ progress: number; speed: string; status: string }> = ({ progress, speed, status }) => {
@@ -143,36 +144,52 @@ export const OrderTrackingScreen: React.FC = () => {
   const [speed, setSpeed] = useState('24 km/h');
   const [isLive, setIsLive] = useState(false);
 
-  // Écouter en temps réel les coordonnées partagées par le livreur
+  // Écouter en temps réel les coordonnées partagées par le livreur via Supabase
   useEffect(() => {
     if (!latestOrder) return;
 
     const orderId = latestOrder.id;
-    // Charger immédiatement s'il y a quelque chose de stocké
-    const initialPos = localStorage.getItem(`livreur_position_${orderId}`);
-    if (initialPos) {
-      const pos = JSON.parse(initialPos);
-      setProgress(pos.progress);
-      setSpeed(pos.speed || '24 km/h');
-      setIsLive(pos.status === 'en_route');
-    }
 
-    const interval = setInterval(() => {
-      const posString = localStorage.getItem(`livreur_position_${orderId}`);
-      if (posString) {
-        const pos = JSON.parse(posString);
-        setProgress(pos.progress);
-        setSpeed(pos.speed || '24 km/h');
-        setIsLive(pos.status === 'en_route');
-      } else {
-        // Simple simulation if no live data
-        if (progress < 1) {
-          setProgress(prev => Math.min(prev + 0.01, 1));
+    // 1. Abonnement aux changements de la commande en temps réel
+    const channel = supabase
+      .channel(`order-tracking-${orderId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'orders',
+          filter: `id=eq.${orderId}`,
+        },
+        (payload) => {
+          const updatedOrder = payload.new;
+          if (updatedOrder.latitude && updatedOrder.longitude) {
+            // Ici on pourrait calculer le progrès basé sur la distance
+            // Pour la démo, on garde un progrès simulé mais activé par le statut réel
+            setIsLive(true);
+          }
+          
+          // Mise à jour du statut local si nécessaire
+          if (updatedOrder.status === 'delivered') {
+            setProgress(1);
+          } else if (updatedOrder.status === 'delivering') {
+            setProgress(0.6);
+          }
         }
-      }
-    }, 3000);
+      )
+      .subscribe();
 
-    return () => clearInterval(interval);
+    // 2. Fallback simulation intelligente si pas de live
+    const interval = setInterval(() => {
+      if (progress < 1 && latestOrder.status === 'delivering') {
+        setProgress(prev => Math.min(prev + 0.005, 0.99));
+      }
+    }, 5000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(interval);
+    };
   }, [latestOrder, progress]);
 
   if (!latestOrder) {

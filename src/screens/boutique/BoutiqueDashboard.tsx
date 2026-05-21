@@ -137,8 +137,53 @@ export const BoutiqueDashboard: React.FC = () => {
     saveCatalog(updated);
   };
 
-  // Filtrer les commandes mockées
-  const activeOrders = MOCK_ORDERS.filter(o => o.status !== 'delivered' && o.status !== 'cancelled');
+  // Gestion des commandes réelles
+  const [realOrders, setRealOrders] = useState<any[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(true);
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      setLoadingOrders(true);
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .neq('status', 'delivered')
+        .neq('status', 'cancelled')
+        .order('created_at', { ascending: false });
+      
+      if (data) setRealOrders(data);
+      setLoadingOrders(false);
+    };
+
+    fetchOrders();
+
+    // Abonnement temps réel
+    const channel = supabase
+      .channel('boutique-orders')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          setRealOrders(prev => [payload.new, ...prev]);
+        } else if (payload.eventType === 'UPDATE') {
+          setRealOrders(prev => prev.map(o => o.id === payload.new.id ? payload.new : o).filter(o => o.status !== 'delivered' && o.status !== 'cancelled'));
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const handleUpdateStatus = async (orderId: string, newStatus: string) => {
+    const { error } = await supabase
+      .from('orders')
+      .update({ status: newStatus })
+      .eq('id', orderId);
+    
+    if (error) alert("Erreur lors de la mise à jour : " + error.message);
+  };
+
+  const activeOrders = realOrders;
 
   // Stats Analytics
   const weeklySales = [
@@ -287,12 +332,27 @@ export const BoutiqueDashboard: React.FC = () => {
                         </div>
                         
                         <div className="flex gap-2">
-                          <button className="flex-1 bg-brand-surface-variant text-brand-on-surface rounded-xl py-3 text-xs font-bold active:scale-95 transition-all hover:bg-brand-surface-high">
-                            Refuser
-                          </button>
-                          <button className="flex-1 bg-brand-tertiary text-brand-on-tertiary rounded-xl py-3 text-xs font-bold active:scale-95 transition-all shadow-md shadow-brand-tertiary/20">
-                            Prêt au retrait
-                          </button>
+                          {order.status === 'confirmed' && (
+                            <button 
+                              onClick={() => handleUpdateStatus(order.id, 'preparing')}
+                              className="flex-1 bg-brand-tertiary text-brand-on-tertiary rounded-xl py-3 text-xs font-bold active:scale-95 transition-all shadow-md shadow-brand-tertiary/20"
+                            >
+                              Accepter & Préparer
+                            </button>
+                          )}
+                          {order.status === 'preparing' && (
+                            <button 
+                              onClick={() => handleUpdateStatus(order.id, 'ready')}
+                              className="flex-1 bg-green-500 text-white rounded-xl py-3 text-xs font-bold active:scale-95 transition-all shadow-md"
+                            >
+                              Prêt au retrait
+                            </button>
+                          )}
+                          {order.status === 'ready' && (
+                            <div className="flex-1 text-center py-3 text-xs font-bold text-brand-on-surface-variant bg-brand-surface-low rounded-xl">
+                              En attente du livreur...
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>

@@ -47,9 +47,29 @@ export const PaymentScreen: React.FC = () => {
       // 2. Save to Supabase
       const { error: dbError } = await supabase
         .from('orders')
-        .insert([orderData]);
+        .insert([{
+          id: orderId,
+          user_id: state.user?.id,
+          status: 'confirmed',
+          total: total,
+          delivery_fee: deliveryFee,
+          payment_status: 'paid',
+          delivery_time: '14:45',
+          items: state.cart // Stockage JSON pour affichage rapide
+        }]);
 
       if (dbError) throw dbError;
+
+      // 2b. Save detailed items for analytics
+      const orderItems = state.cart.map(item => ({
+        order_id: orderId,
+        product_id: item.productId,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity
+      }));
+
+      await supabase.from('order_items').insert(orderItems);
 
       // 3. Update local state
       dispatch({ 

@@ -70,6 +70,8 @@ export interface Order {
   createdAt: string;
   deliveryTime?: string;
   carrier?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface NavItem {
