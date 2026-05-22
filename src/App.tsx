@@ -6,6 +6,8 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Layout } from './components/Layout';
+import { CatalogScreen } from './screens/client/CatalogScreen'; 
+import { ClientHomeScreen } from './screens/client/ClientHomeScreen';
 import { AppProvider, useApp } from './context/AppContext';
 import { LandingScreen } from './screens/LandingScreen';
 import { LoginScreen } from './screens/LoginScreen';
@@ -110,6 +112,11 @@ export default function App() {
             <Route path="/orders/payment" element={<PaymentScreen />} />
             <Route path="/alerts" element={<AlertsScreen />} />
             <Route path="/profile" element={<ProfileScreen />} />
+            {/* ajout des routes spécifiques pour les services - à implémenter dans les prochaines phases */}
+          <Route path="/" element={<Navigate to="/home" replace />} />
+          <Route path="/home" element={<ClientHomeScreen />} />
+
+          <Route path="/catalog" element={<CatalogScreen />} />
           </Route>
 
           {/* Placeholders pour les autres rôles - à implémenter dans les prochaines phases */}

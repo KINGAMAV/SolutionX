@@ -1,0 +1,427 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  email     String   @unique
+  phone     String?
+  name      String
+  avatarUrl String?  @map("avatar_url")
+  role      String   @db.VarChar(50)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  resident         Resident?
+  shop             Shop?
+  artisanProfile   ArtisanProfile?
+  courier          Courier?
+  notifications    Notification[]
+  paymentsFrom     Payment[]        @relation("payer")
+  ratingsFrom      Rating[]         @relation("rater")
+  ratingsTo        Rating[]         @relation("rated")
+  housesAsPrimary  House[]          @relation("primaryResident")
+  disputesReported Dispute[]        @relation("reporter")
+  disputesAgainst  Dispute[]        @relation("against")
+  disputesResolved Dispute[]        @relation("resolver")
+
+  @@index([email])
+  @@index([role])
+}
+
+model House {
+  id               String   @id @default(uuid()) @db.Uuid
+  houseNumber      String   @unique @map("house_number")
+  block            String?
+  primaryResidentId String? @map("primary_resident_id") @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  primaryResident Resident?  @relation(fields: [primaryResidentId], references: [id], name: "primaryResident")
+  residents       Resident[] @relation("houseResidents")
+  orders          Order[]
+  contributions   Contribution[]
+
+  @@index([houseNumber])
+  @@index([primaryResidentId])
+}
+
+model Resident {
+  id                    String   @id @default(uuid()) @db.Uuid
+  userId                String   @unique @map("user_id") @db.Uuid
+  houseId               String   @map("house_id") @db.Uuid
+  householdCode         String?  @map("household_code")
+  language              String   @default("fr") @db.VarChar(5)
+  notificationPreferences Json?   @map("notification_preferences")
+  isActive              Boolean  @default(true) @map("is_active")
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  house              House               @relation("houseResidents", fields: [houseId], references: [id], onDelete: Restrict)
+  orders             Order[]
+  artisanRequests    ArtisanRequest[]
+  payments           Payment[]
+  contributions      Contribution[]
+
+  @@index([userId])
+  @@index([houseId])
+}
+
+model Shop {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @unique @map("user_id") @db.Uuid
+  name          String
+  description   String?
+  address       String?
+  phone         String?
+  status        String   @default("pending") @db.VarChar(50)
+  hours         Json?
+  commissionPct Decimal  @default(10) @db.Decimal(5, 2) @map("commission_pct")
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products   Product[]
+  orders     Order[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model Product {
+  id        String   @id @default(uuid()) @db.Uuid
+  shopId    String   @map("shop_id") @db.Uuid
+  name      String
+  description String?
+  category  String?
+  price     Decimal  @db.Decimal(10, 2)
+  unit      String?
+  stock     Int      @default(0)
+  imageUrl  String?  @map("image_url")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  shop        Shop        @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  orderItems  OrderItem[]
+
+  @@index([shopId])
+  @@index([category])
+}
+
+model ArtisanProfile {
+  id                String   @id @default(uuid()) @db.Uuid
+  userId            String   @unique @map("user_id") @db.Uuid
+  profession        String
+  specialty         String?
+  experienceYears   Int?     @map("experience_years")
+  rating            Decimal  @default(0) @db.Decimal(3, 2)
+  basePrice         Decimal? @map("base_price") @db.Decimal(10, 2)
+  status            String   @default("pending") @db.VarChar(50)
+  bio               String?
+  documentsValidated Boolean @default(false) @map("documents_validated")
+  isActive          Boolean  @default(true) @map("is_active")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  schedules       ArtisanSchedule[]
+  requests        ArtisanRequest[]
+
+  @@index([userId])
+  @@index([profession])
+  @@index([status])
+}
+
+model ArtisanSchedule {
+  id          String   @id @default(uuid()) @db.Uuid
+  artisanId   String   @map("artisan_id") @db.Uuid
+  dayOfWeek   Int?     @map("day_of_week")
+  fromTime    String?  @map("from_time")
+  toTime      String?  @map("to_time")
+  isAvailable Boolean  @default(true) @map("is_available")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  artisan ArtisanProfile @relation(fields: [artisanId], references: [id], onDelete: Cascade)
+
+  @@index([artisanId])
+}
+
+model Courier {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @unique @map("user_id") @db.Uuid
+  status        String   @default("inactive") @db.VarChar(50)
+  locationLat   Decimal? @map("location_lat") @db.Decimal(10, 8)
+  locationLng   Decimal? @map("location_lng") @db.Decimal(11, 8)
+  lastSeen      DateTime? @map("last_seen") @db.Timestamptz()
+  isAvailable   Boolean  @default(false) @map("is_available")
+  vehicleType   String?  @map("vehicle_type")
+  totalEarnings Decimal  @default(0) @db.Decimal(12, 2) @map("total_earnings")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  user     User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders   Order[]
+  missions DeliveryMission[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model Order {
+  id                String   @id @default(uuid()) @db.Uuid
+  residentId        String   @map("resident_id") @db.Uuid
+  houseId           String   @map("house_id") @db.Uuid
+  shopId            String?  @map("shop_id") @db.Uuid
+  type              String   @db.VarChar(50)
+  status            String   @default("pending") @db.VarChar(50)
+  paymentStatus     String   @default("unpaid") @map("payment_status") @db.VarChar(50)
+  deliveryFee       Decimal  @default(0) @db.Decimal(10, 2) @map("delivery_fee")
+  totalAmount       Decimal  @db.Decimal(12, 2) @map("total_amount")
+  commissionAmount  Decimal  @default(0) @db.Decimal(10, 2) @map("commission_amount")
+  deliveryType      String?  @map("delivery_type") @db.VarChar(50)
+  assignedCourierId String?  @map("assigned_courier_id") @db.Uuid
+  pickupAddress     String?  @map("pickup_address")
+  dropoffAddress    String?  @map("dropoff_address")
+  scheduledAt       DateTime? @map("scheduled_at") @db.Timestamptz()
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  resident        Resident           @relation(fields: [residentId], references: [id], onDelete: Restrict)
+  house           House              @relation(fields: [houseId], references: [id], onDelete: Restrict)
+  shop            Shop?              @relation(fields: [shopId], references: [id], onDelete: SetNull)
+  assignedCourier Courier?           @relation(fields: [assignedCourierId], references: [id], onDelete: SetNull)
+  items           OrderItem[]
+  mission         DeliveryMission?
+  payments        Payment[]
+  ratings         Rating[]
+  disputes        Dispute[]
+
+  @@index([residentId])
+  @@index([houseId])
+  @@index([shopId])
+  @@index([assignedCourierId])
+  @@index([status])
+  @@index([type])
+}
+
+model OrderItem {
+  id        String   @id @default(uuid()) @db.Uuid
+  orderId   String   @map("order_id") @db.Uuid
+  productId String?  @map("product_id") @db.Uuid
+  name      String
+  price     Decimal  @db.Decimal(10, 2)
+  quantity  Int
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+}
+
+model DeliveryMission {
+  id        String   @id @default(uuid()) @db.Uuid
+  orderId   String   @unique @map("order_id") @db.Uuid
+  courierId String?  @map("courier_id") @db.Uuid
+  status    String   @default("pending") @db.VarChar(50)
+  distance  Decimal? @db.Decimal(10, 2)
+  price     Decimal? @db.Decimal(10, 2)
+  etaMinutes Int?    @map("eta_minutes")
+  startedAt DateTime? @map("started_at") @db.Timestamptz()
+  endedAt   DateTime? @map("ended_at") @db.Timestamptz()
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  courier Courier? @relation(fields: [courierId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([courierId])
+  @@index([status])
+}
+
+model ArtisanRequest {
+  id                String   @id @default(uuid()) @db.Uuid
+  residentId        String   @map("resident_id") @db.Uuid
+  artisanId         String   @map("artisan_id") @db.Uuid
+  status            String   @default("pending") @db.VarChar(50)
+  requestedDate     DateTime? @map("requested_date") @db.Date()
+  requestedTimeSlot String?  @map("requested_time_slot")
+  acceptedDate      DateTime? @map("accepted_date") @db.Date()
+  acceptedTimeSlot  String?  @map("accepted_time_slot")
+  description       String?
+  amountRequested   Decimal? @map("amount_requested") @db.Decimal(10, 2)
+  amountPaid        Decimal  @default(0) @map("amount_paid") @db.Decimal(10, 2)
+  paymentStatus     String?  @default("unpaid") @map("payment_status")
+  notes             String?
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  resident Resident          @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  artisan  ArtisanProfile    @relation(fields: [artisanId], references: [id], onDelete: Cascade)
+  payments Payment[]
+
+  @@index([residentId])
+  @@index([artisanId])
+  @@index([status])
+}
+
+model Payment {
+  id                 String   @id @default(uuid()) @db.Uuid
+  orderId            String?  @map("order_id") @db.Uuid
+  artisanRequestId   String?  @map("artisan_request_id") @db.Uuid
+  residentId         String   @map("resident_id") @db.Uuid
+  amount             Decimal  @db.Decimal(12, 2)
+  method             String   @db.VarChar(50)
+  provider           String?
+  status             String   @default("pending") @db.VarChar(50)
+  transactionRef     String?  @map("transaction_ref")
+  metadata           Json?
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  order            Order?             @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  artisanRequest   ArtisanRequest?    @relation(fields: [artisanRequestId], references: [id], onDelete: SetNull)
+  resident         Resident           @relation(fields: [residentId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([residentId])
+  @@index([status])
+}
+
+model Promotion {
+  id          String   @id @default(uuid()) @db.Uuid
+  ownerType   String?  @map("owner_type")
+  ownerId     String?  @map("owner_id") @db.Uuid
+  code        String   @unique
+  description String?
+  discountPct Decimal? @map("discount_pct") @db.Decimal(5, 2)
+  discountAmount Decimal? @map("discount_amount") @db.Decimal(10, 2)
+  validFrom   DateTime? @map("valid_from") @db.Date()
+  validTo     DateTime? @map("valid_to") @db.Date()
+  maxUses     Int?     @map("max_uses")
+  currentUses Int      @default(0) @map("current_uses")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@index([code])
+}
+
+model Rating {
+  id          String   @id @default(uuid()) @db.Uuid
+  sourceUserId String @map("source_user_id") @db.Uuid
+  targetUserId String @map("target_user_id") @db.Uuid
+  targetType  String?  @map("target_type")
+  orderId     String?  @map("order_id") @db.Uuid
+  score       Int
+  comment     String?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  sourceUser User    @relation("rater", fields: [sourceUserId], references: [id], onDelete: Cascade)
+  targetUser User    @relation("rated", fields: [targetUserId], references: [id], onDelete: Cascade)
+  order      Order?  @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([targetUserId, targetType])
+  @@index([sourceUserId])
+}
+
+model DeliveryRate {
+  id                 String   @id @default(uuid()) @db.Uuid
+  timeSlot           String   @map("time_slot")
+  baseFee            Decimal  @map("base_fee") @db.Decimal(10, 2)
+  distanceRatePerKm  Decimal  @map("distance_rate_per_km") @db.Decimal(10, 2)
+  surgePct           Decimal  @default(0) @map("surge_pct") @db.Decimal(5, 2)
+  isActive           Boolean  @default(true) @map("is_active")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@index([timeSlot])
+}
+
+model Notification {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  type      String
+  title     String?
+  message   String?
+  metadata  Json?
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isRead])
+}
+
+model Cart {
+  id        String   @id @default(uuid()) @db.Uuid
+  residentId String  @map("resident_id") @db.Uuid
+  shopId    String?  @map("shop_id") @db.Uuid
+  items     Json?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@index([residentId])
+}
+
+model Contribution {
+  id            String   @id @default(uuid()) @db.Uuid
+  houseId       String   @map("house_id") @db.Uuid
+  residentId    String?  @map("resident_id") @db.Uuid
+  amountDue     Decimal  @map("amount_due") @db.Decimal(12, 2)
+  amountPaid    Decimal  @default(0) @map("amount_paid") @db.Decimal(12, 2)
+  paymentStatus String   @default("unpaid") @map("payment_status")
+  dueDate       DateTime? @map("due_date") @db.Date()
+  paidAt        DateTime? @map("paid_at") @db.Timestamptz()
+  description   String?
+  receiptUrl    String?  @map("receipt_url")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  house     House    @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  resident  Resident? @relation(fields: [residentId], references: [id], onDelete: SetNull)
+
+  @@index([houseId])
+  @@index([residentId])
+  @@index([paymentStatus])
+}
+
+model Dispute {
+  id           String   @id @default(uuid()) @db.Uuid
+  orderId      String?  @map("order_id") @db.Uuid
+  reportedById String   @map("reported_by_id") @db.Uuid
+  againstId    String?  @map("against_id") @db.Uuid
+  type         String?
+  description  String?
+  status       String   @default("open")
+  resolution   String?
+  resolvedById String?  @map("resolved_by_id") @db.Uuid
+  resolvedAt   DateTime? @map("resolved_at") @db.Timestamptz()
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  order    Order?  @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  reporter User    @relation("reporter", fields: [reportedById], references: [id], onDelete: Cascade)
+  against  User?   @relation("against", fields: [againstId], references: [id], onDelete: SetNull)
+  resolver User?   @relation("resolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([reportedById])
+  @@index([status])
+}
