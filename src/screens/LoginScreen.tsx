@@ -49,28 +49,70 @@ export const LoginScreen: React.FC = () => {
 
     try {
       if (mode === 'login') {
+        console.log("[Login] Tentative de connexion avec:", formData.email);
+        console.log("[Login] Email trimé:", formData.email.trim());
+        
+        // Vérifier la session actuelle avant la tentative
+        const { data: currentSession } = await supabase.auth.getSession();
+        console.log("[Login] Session avant login:", currentSession.session ? "Active" : "Aucune");
+        
+        // Si y a une session antérieure, la forcer à se terminer AVANT de se reconnecter
+        // C'est une cause courante d'erreur "Invalid login credentials" après une déconnexion
+        if (currentSession.session) {
+          console.log("[Login] ⚠️ Session antérieure trouvée, on la forcer à terminer...");
+          try {
+            // Timeout de 1s pour le signOut
+            const signOutPromise = supabase.auth.signOut({ scope: 'local' });
+            const timeoutPromise = new Promise((resolve) =>
+              setTimeout(() => {
+                console.warn("[Login] Ancien signOut timeout");
+                resolve(null);
+              }, 1000)
+            );
+            await Promise.race([signOutPromise, timeoutPromise]);
+          } catch (err) {
+            console.warn("[Login] Erreur lors du signOut antérieur (ignorée):", err);
+          }
+          console.log("[Login] ✅ Session antérieure nettoyée");
+        }
+        
         const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
           email: formData.email.trim(),
           password: formData.password,
         });
 
         if (authError) {
-          setError("Identifiants incorrects : " + authError.message);
+          console.error("[Login] Erreur Supabase complète:", {
+            message: authError.message,
+            code: (authError as any).code,
+            status: (authError as any).status,
+          });
+          setError("❌ " + (authError.message === 'Invalid login credentials' 
+            ? "Email ou mot de passe incorrect" 
+            : authError.message));
           setLoading(false);
           return;
         }
 
         if (authData?.user) {
-          // On laisse AppContext gérer la redirection via l'état global ou on redirige ici
-          // Pour être sûr, on récupère le rôle des métadonnées ou de la base
-          const role = authData.user.user_metadata?.role || 'client';
-          navigate(getRoleHomeRoute(role));
+          console.log("[Login] ✅ Authentification réussie pour:", authData.user.email);
+          console.log("[Login] User ID:", authData.user.id);
+          console.log("[Login] Session créée:", !!authData.session);
+          // On NE redirige PAS ici - AppContext va s'en charger via onAuthStateChange
+          // Juste un petit feedback visuel
+          setSuccess('✅ Connexion réussie, redirection en cours...');
+          // On retire le loading après 1s pour que l'utilisateur voit le message
+          setTimeout(() => {
+            setLoading(false);
+          }, 500);
           return;
         }
       } else {
         // Logique spéciale pour l'inscription : si l'email contient 'admin', on lui donne le rôle admin (pour test/bootstrap)
         const isInitialAdmin = formData.email.toLowerCase().includes('admin@citeconnect.com') || formData.email.toLowerCase() === 'amavkingofficielle@gamil.com';
         const role = isInitialAdmin ? 'admin' : 'client';
+
+        console.log("[Signup] Création de compte avec role:", role);
 
         const { data: signUpData, error: authError } = await supabase.auth.signUp({
           email: formData.email.trim(),
@@ -85,17 +127,21 @@ export const LoginScreen: React.FC = () => {
         });
 
         if (authError) {
-          setError(authError.message);
+          console.error("[Signup] Erreur Supabase:", authError);
+          setError("❌ Erreur inscription : " + authError.message);
           setLoading(false);
           return;
         }
         
-        setSuccess('Inscription réussie ! Vous pouvez maintenant vous connecter.');
+        console.log("[Signup] ✅ Compte créé avec succès");
+        setSuccess('✅ Inscription réussie ! Vous pouvez maintenant vous connecter.');
         setMode('login');
+        setFormData({ name: '', email: '', houseNumber: '', password: '' });
         setLoading(false);
       }
     } catch (err: any) {
-      setError("Une erreur inattendue est survenue : " + err.message);
+      console.error("[Auth] Exception:", err);
+      setError("❌ Erreur inattendue : " + err.message);
       setLoading(false);
     }
   };
