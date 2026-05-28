@@ -1,0 +1,22 @@
+[33mc2858b5[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/feat/client-flow-v1[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mfeat/client-flow-v1[m[33m)[m connexion front et back comme il se doit
+[33ma7b8049[m feat: navigation client & écrans catalogue
+[33m90db646[m fix: résolution du chargement infini et amélioration de la robustesse de l'auth
+[33m422dff0[m feat: implémentation du flux de commande réel (Client -> Boutique -> Livreur) avec suivi GPS temps réel
+[33me9bd3fa[m fix: add missing framer-motion dependency
+[33me2d8ad2[m chore: trigger new vercel build with fixed lockfile
+[33m84236a6[m fix: update pnpm-lock.yaml and remove package-lock.json to fix Vercel build
+[33me490820[m feat: mise à jour du logo et correction du chargement infini auth
+[33m78bdeb3[m refactor: Rename SolutionX to Cité Connect
+[33mbe4ceed[m feat(auth): Improve login and session restoration
+[33m7c30e87[m suppression des comptes demos
+[33m3a804e7[m feat: Initialize Supabase environment variables
+[33m7e81c74[m design: make all pro dashboards fully responsive with a sleek mobile bottom navbar
+[33m0e83c28[m fix: make Supabase client initialization resilient to missing env variables
+[33m02794b6[m add vercel routing configuration for client-side SPA
+[33ma8b9ebb[m dernière modif de l'appli beta
+[33mf57a403[m checkout: temporary commit for worktree checkout
+[33m0d251e2[m docs: Add local installation guide
+[33ma6df4ac[m true message
+[33mf9ec79f[m Checkpoint: Correction de l'erreur "Missing Supabase environment variables" en créant .env.local avec valeurs par défaut et en modifiant supabase.ts pour gérer gracieusement les variables manquantes en développement. Application maintenant fonctionnelle avec page de connexion affichée correctement.
+[33m615f1d4[m feat: Initial SolutionX PWA implementation with authentication, Supabase integration, and multi-role support
+[33m1da2e6f[m Initial project bootstrap
