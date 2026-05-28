@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Header } from '../components/Header';
-import { ShoppingBasket, Flame, Construction, Bike, Wallet, ChevronRight, Truck } from 'lucide-react';
+import { ShoppingBasket, Construction, Bike, Wallet, ChevronRight, Truck, Flame } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 
@@ -49,7 +49,7 @@ export const HomeScreen: React.FC = () => {
           </div>
           
           <div className="grid grid-cols-2 gap-3">
-            {/* Main Tile */}
+            {/* Main Tile - Courses alimentaires */}
             <button 
               onClick={() => navigate('/services/grocery')}
               className="col-span-2 relative h-44 bg-gradient-to-br from-[#f57c00] to-[#ffb786] rounded-[2rem] p-6 overflow-hidden text-left shadow-lg active:scale-[0.98] transition-transform"
@@ -66,20 +66,23 @@ export const HomeScreen: React.FC = () => {
               <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
             </button>
 
-            {/* Small Tiles */}
-            <div className="bg-brand-surface-low rounded-[2rem] p-5 h-44 flex flex-col justify-between border border-brand-outline/10 active:scale-[0.98] transition-transform">
+            {/* 🔥 Gaz - Bouton fonctionnel */}
+            <button 
+              onClick={() => navigate('/catalog?service=gaz')}
+              className="bg-brand-surface-low rounded-[2rem] p-5 h-44 flex flex-col justify-between border border-brand-outline/10 active:scale-[0.98] transition-transform text-left"
+            >
               <div className="w-10 h-10 rounded-2xl bg-brand-secondary-container flex items-center justify-center text-brand-on-surface">
-                {/* Custom icon approximation */}
-                <span className="font-bold text-xl">♨</span>
+                <Flame size={22} />
               </div>
               <div>
                 <h3 className="font-bold text-brand-on-surface">Gaz</h3>
                 <p className="text-brand-on-surface-variant text-[10px] font-medium uppercase tracking-wide">Recharge rapide</p>
               </div>
-            </div>
+            </button>
 
+            {/* 🔧 Artisans */}
             <button 
-              onClick={() => navigate('/services/artisans')}
+              onClick={() => navigate('/catalog?service=artisans')}
               className="bg-brand-surface-low rounded-[2rem] p-5 h-44 flex flex-col justify-between border border-brand-outline/10 active:scale-[0.98] transition-transform text-left"
             >
               <div className="w-10 h-10 rounded-2xl bg-brand-surface-highest flex items-center justify-center text-brand-primary">
@@ -91,8 +94,9 @@ export const HomeScreen: React.FC = () => {
               </div>
             </button>
 
+            {/* 🚴 Course express */}
             <button 
-              onClick={() => navigate('/services/parcel')}
+              onClick={() => navigate('/catalog?service=cours-express')}
               className="bg-brand-surface-low rounded-[2rem] p-5 h-44 flex flex-col justify-between border border-brand-outline/10 active:scale-[0.98] transition-transform text-left"
             >
               <div className="w-10 h-10 rounded-2xl bg-[#dde4e6] flex items-center justify-center text-brand-tertiary">
@@ -104,7 +108,11 @@ export const HomeScreen: React.FC = () => {
               </div>
             </button>
 
-            <div className="bg-brand-surface-low rounded-[2rem] p-5 h-44 flex flex-col justify-between border border-brand-outline/10 active:scale-[0.98] transition-transform">
+            {/* 💰 Cotisation - Bouton fonctionnel UNIQUE */}
+            <button 
+              onClick={() => navigate('/catalog?service=cotisation')}
+              className="bg-brand-surface-low rounded-[2rem] p-5 h-44 flex flex-col justify-between border border-brand-outline/10 active:scale-[0.98] transition-transform text-left"
+            >
               <div className="w-10 h-10 rounded-2xl bg-brand-secondary-fixed flex items-center justify-center text-brand-on-secondary">
                 <Wallet size={22} />
               </div>
@@ -112,7 +120,7 @@ export const HomeScreen: React.FC = () => {
                 <h3 className="font-bold text-brand-on-surface">Cotisation</h3>
                 <p className="text-brand-on-surface-variant text-[10px] font-medium uppercase tracking-wide">Frais de syndic</p>
               </div>
-            </div>
+            </button>
           </div>
         </section>
 
