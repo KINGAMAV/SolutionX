@@ -27,6 +27,7 @@ import { AdminDashboard } from './screens/admin/AdminDashboard';
 import { BoutiqueDashboard } from './screens/boutique/BoutiqueDashboard';
 import { LivreurDashboard } from './screens/livreur/LivreurDashboard';
 import { ArtisanDashboard } from './screens/artisan/ArtisanDashboard';
+import { SyndicsScreen } from './screens/SyndicsScreen';
 import { UserRole } from './types';
 
 const LoadingScreen = () => (
@@ -49,6 +50,8 @@ const getRoleHomeRoute = (role?: string) => {
       return '/livreur';
     case 'artisan':
       return '/artisan';
+    case 'syndics':
+      return '/syndics';
     case 'client':
     default:
       return '/';
@@ -124,6 +127,7 @@ export default function App() {
           <Route path="/boutique/*" element={<RequireRole allowedRoles={['boutique']}><BoutiqueDashboard /></RequireRole>} />
           <Route path="/livreur/*" element={<RequireRole allowedRoles={['livreur']}><LivreurDashboard /></RequireRole>} />
           <Route path="/artisan/*" element={<RequireRole allowedRoles={['artisan']}><ArtisanDashboard /></RequireRole>} />
+          <Route path="/syndics/*" element={<RequireRole allowedRoles={['syndics']}><SyndicsScreen /></RequireRole>} />
 
           <Route path="*" element={<Navigate to="/welcome" replace />} />
         </Routes>
