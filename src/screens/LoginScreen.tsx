@@ -19,6 +19,7 @@ export const LoginScreen: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState<string | null>(null); // Pour gérer le chargement des boutons de démo
 
   const getRoleHomeRoute = (role?: string) => {
     switch (role) {
@@ -31,8 +32,39 @@ export const LoginScreen: React.FC = () => {
         return '/livreur';
       case 'artisan':
         return '/artisan';
+      case 'syndics':
+        return '/syndics';
       default:
         return '/';
+    }
+  };
+
+  const handleDemoLogin = async (role: string) => {
+    setDemoLoading(role);
+    setError('');
+    setSuccess('');
+    try {
+      const email = `${role}@demo.com`;
+      const password = 'password123'; // Mot de passe générique pour la démo
+
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: password,
+      });
+
+      if (authError) {
+        setError(`Erreur de connexion pour ${role}: ` + authError.message);
+        setDemoLoading(null);
+        return;
+      }
+
+      if (authData?.user) {
+        navigate(getRoleHomeRoute(role));
+      }
+    } catch (err: any) {
+      setError("Une erreur inattendue est survenue lors de la connexion démo : " + err.message);
+    } finally {
+      setDemoLoading(null);
     }
   };
 
@@ -243,6 +275,23 @@ export const LoginScreen: React.FC = () => {
               {loading ? 'Chargement...' : (mode === 'login' ? 'Se connecter' : 'Créer un compte')}
             </button>
 
+            </div>
+
+            {/* Boutons de connexion rapide pour la démo */}
+            <div className="flex flex-col gap-3 mt-6">
+              <p className="text-center text-sm font-bold text-brand-on-surface-variant">Connexion rapide (Démo) :</p>
+              <div className="grid grid-cols-2 gap-3">
+                {[ 'admin', 'livreur', 'client', 'boutique', 'syndics', 'artisan' ].map((role) => (
+                  <button
+                    key={role}
+                    onClick={() => handleDemoLogin(role)}
+                    disabled={demoLoading === role || loading}
+                    className={`w-full h-12 bg-brand-secondary-container text-brand-on-secondary-container rounded-xl font-bold shadow-md active:scale-95 transition-all text-sm disabled:opacity-60 flex items-center justify-center`}
+                  >
+                    {demoLoading === role ? 'Connexion...' : role.charAt(0).toUpperCase() + role.slice(1)}
+                  </button>
+                ))}
+              </div>
             </div>
 
           <p className="text-center text-sm font-medium text-brand-on-surface-variant">
