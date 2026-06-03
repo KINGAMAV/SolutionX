@@ -22,6 +22,11 @@ export const CatalogScreen = () => {
   const [loading, setLoading] = useState(true);
 
 useEffect(() => {
+  if (service === 'cotisation') {
+    navigate('/orders/payment?purpose=cotisation&amount=7500&description=Cotisation%20syndicale');
+    return;
+  }
+
   const fetchBoutiques = async () => {
     setLoading(true);
     try {

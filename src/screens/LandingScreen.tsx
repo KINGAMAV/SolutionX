@@ -41,8 +41,8 @@ export const LandingScreen: React.FC = () => {
           transition={{ delay: 0.2 }}
           className="space-y-3"
         >
-          <h1 className="text-3xl font-black text-brand-primary tracking-tight">Bienvenue sur Cité Connect</h1>
-          <p className="text-lg font-medium text-brand-on-surface-variant">Votre cité connectée, vos services simplifiés.</p>
+          <h1 className="text-3xl font-black text-brand-primary tracking-tight">Bienvenue sur Concorde Shop</h1>
+          <p className="text-lg font-medium text-brand-on-surface-variant">Votre boutique connectée, vos services simplifiés.</p>
         </motion.div>
       </div>
 

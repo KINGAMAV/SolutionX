@@ -1,6 +1,6 @@
 import { type LucideIcon } from 'lucide-react';
 
-export type UserRole = 'client' | 'artisan' | 'boutique' | 'livreur' | 'agent' | 'admin';
+export type UserRole = 'client' | 'artisan' | 'boutique' | 'livreur' | 'agent' | 'admin' | 'syndics';
 
 export interface User {
   id: string;
@@ -72,6 +72,7 @@ export interface Order {
   carrier?: string;
   latitude?: number;
   longitude?: number;
+  paymentMethod?: string;
 }
 
 export interface NavItem {

@@ -8,7 +8,7 @@ interface HeaderProps {
   userAvatar?: string;
 }
 
-export const Header: React.FC<HeaderProps> = ({ title = 'Cité Connect', userAvatar }) => {
+export const Header: React.FC<HeaderProps> = ({ title = 'Concorde Shop', userAvatar }) => {
   return (
     <header className="bg-brand-surface shadow-sm flex justify-between items-center w-full px-5 h-16 sticky top-0 z-50">
       <div className="flex items-center gap-3">

@@ -1,108 +1,115 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Bell, Calendar, Smartphone, Wallet, CreditCard, Lock, Download, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { supabase } from '../lib/supabase';
+import { PAYMENT_METHODS } from '../data/paymentMethods';
+
+const PAYMENT_PURPOSES: Record<string, { title: string; description: string; defaultAmount: number }> = {
+  order: { title: 'Commande', description: 'Paiement de commande', defaultAmount: 0 },
+  cotisation: { title: 'Cotisation Syndicale', description: 'Cotisation mensuelle', defaultAmount: 7500 },
+  boutique_fee: { title: 'Abonnement Boutique', description: 'Frais mensuels boutique', defaultAmount: 12000 },
+  syndic_subscription: { title: 'Cotisation Syndicale', description: 'Paiement de la cotisation', defaultAmount: 8500 },
+};
 
 export const PaymentScreen: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { state, dispatch } = useApp();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedMethod, setSelectedMethod] = useState('Orange Money');
+  const [selectedMethod, setSelectedMethod] = useState(PAYMENT_METHODS[0].name);
 
-  const subtotal = state.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const deliveryFee = 1000; // Simplified for now
-  const total = subtotal + deliveryFee;
+  const purpose = searchParams.get('purpose') || 'order';
+  const queryAmount = Number(searchParams.get('amount')) || 0;
+  const paymentMeta = PAYMENT_PURPOSES[purpose] || PAYMENT_PURPOSES.order;
+  const paymentDescription = searchParams.get('description') || paymentMeta.description;
 
-  const methods = [
-    { name: 'Orange Money', sub: 'Rapide et sécurisé', icon: Smartphone, color: 'bg-[#ff7900]/10', iconColor: 'text-[#ff7900]' },
-    { name: 'Wave', sub: 'Frais réduits', icon: Wallet, color: 'bg-blue-100', iconColor: 'text-blue-500' },
-    { name: 'MTN MoMo', sub: 'Paiement instantané', icon: Smartphone, color: 'bg-yellow-100', iconColor: 'text-yellow-600' },
-    { name: 'Carte Bancaire', sub: 'Visa, Mastercard', icon: CreditCard, color: 'bg-brand-surface-low', iconColor: 'text-brand-primary' },
-  ];
+  const subtotal = state.cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const deliveryFee = state.cart.length > 0 ? 1000 : 0;
+  const total = state.cart.length > 0 ? subtotal + deliveryFee : queryAmount > 0 ? queryAmount : paymentMeta.defaultAmount;
+
+  const itemsToPay = state.cart.length > 0
+    ? state.cart
+    : [{ id: `payment-${purpose}`, productId: purpose, name: paymentDescription, price: total, quantity: 1 }];
+
+  const isEmpty = state.cart.length === 0 && purpose === 'order';
+
+  const orderLabel = useMemo(() => {
+    if (state.cart.length > 0) {
+      return 'Commande en cours';
+    }
+    return paymentMeta.title;
+  }, [paymentMeta.title, state.cart.length]);
 
   const handlePayment = async () => {
-    if (state.cart.length === 0) return;
-    
+    if (isEmpty || total <= 0 || !state.user) return;
+
     try {
       setLoading(true);
       setError(null);
 
-      // 1. Prepare Order Data
       const orderId = `SOL-${Math.floor(10000 + Math.random() * 90000)}`;
-      const orderData = {
+
+      const insertPayload = {
         id: orderId,
-        user_id: state.user?.id,
+        user_id: state.user.id,
         status: 'confirmed',
-        total: total,
+        total,
         delivery_fee: deliveryFee,
-        items: state.cart,
-        delivery_time: '14:45',
-        carrier_name: 'Moussa',
-        payment_status: 'paid'
+        payment_status: 'paid',
+        delivery_time: state.cart.length > 0 ? '14:45' : null,
+        carrier_name: state.cart.length > 0 ? 'Moussa' : null,
+        items: itemsToPay,
       };
 
-      // 2. Save to Supabase
-      const { error: dbError } = await supabase
-        .from('orders')
-        .insert([{
-          id: orderId,
-          user_id: state.user?.id,
-          status: 'confirmed',
-          total: total,
-          delivery_fee: deliveryFee,
-          payment_status: 'paid',
-          delivery_time: '14:45',
-          items: state.cart // Stockage JSON pour affichage rapide
-        }]);
-
+      const { error: dbError } = await supabase.from('orders').insert([insertPayload]);
       if (dbError) throw dbError;
 
-      // 2b. Save detailed items for analytics
-      const orderItems = state.cart.map(item => ({
+      const orderItems = itemsToPay.map((item) => ({
         order_id: orderId,
-        product_id: item.productId,
+        product_id: state.cart.length > 0 ? item.productId : null,
         name: item.name,
         price: item.price,
-        quantity: item.quantity
+        quantity: item.quantity,
       }));
 
-      await supabase.from('order_items').insert(orderItems);
+      if (orderItems.length > 0) {
+        await supabase.from('order_items').insert(orderItems);
+      }
 
-      // 3. Update local state
-      dispatch({ 
-        type: 'ADD_ORDER', 
+      dispatch({
+        type: 'ADD_ORDER',
         payload: {
           id: orderId,
-          userId: state.user?.id || '',
+          userId: state.user.id,
           status: 'confirmed',
-          total: total,
-          deliveryFee: deliveryFee,
-          items: state.cart,
+          total,
+          deliveryFee,
+          items: itemsToPay,
           createdAt: new Date().toISOString(),
-          paymentStatus: 'paid'
-        } 
+          paymentStatus: 'paid',
+          paymentMethod: selectedMethod,
+        },
       });
 
-      // 4. Clear Cart
-      dispatch({ type: 'CLEAR_CART' });
+      if (state.cart.length > 0) {
+        dispatch({ type: 'CLEAR_CART' });
+      }
 
-      // 5. Navigate to tracking
       setTimeout(() => {
         navigate('/orders/tracking');
-      }, 1500);
-
+      }, 700);
     } catch (err: any) {
       console.error('Payment/Order error:', err);
-      setError(err.message || "Une erreur est survenue lors du paiement.");
+      setError(err.message || 'Une erreur est survenue lors du paiement.');
     } finally {
       setLoading(false);
     }
   };
 
-  if (state.cart.length === 0 && !loading) {
+  if (isEmpty && !loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-5 text-center">
         <AlertCircle size={64} className="text-brand-outline opacity-20 mb-4" />
@@ -114,8 +121,8 @@ export const PaymentScreen: React.FC = () => {
   }
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, scale: 0.95 }} 
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       className="bg-brand-background min-h-screen pb-32"
     >
@@ -124,7 +131,10 @@ export const PaymentScreen: React.FC = () => {
           <button onClick={() => navigate(-1)} className="p-2 text-brand-primary">
             <ArrowLeft size={24} />
           </button>
-          <h1 className="text-xl font-bold text-brand-primary">Paiement</h1>
+          <div>
+            <h1 className="text-xl font-bold text-brand-primary">{orderLabel}</h1>
+            <p className="text-sm text-brand-on-surface-variant">{paymentDescription}</p>
+          </div>
         </div>
         <button className="p-2 text-brand-primary group active:scale-90 transition-transform">
           <Bell size={24} />
@@ -132,7 +142,6 @@ export const PaymentScreen: React.FC = () => {
       </header>
 
       <main className="px-5 py-10 space-y-12 max-w-md mx-auto">
-        {/* Invoice Summary Card */}
         <section className="bg-brand-surface-lowest rounded-[2.5rem] p-10 shadow-2xl border border-brand-outline/5 relative overflow-hidden text-center space-y-6">
           <div className="absolute top-0 left-0 w-full h-2 bg-brand-primary opacity-20" />
           <div className="space-y-1">
@@ -147,18 +156,17 @@ export const PaymentScreen: React.FC = () => {
           </div>
         </section>
 
-        {/* Payment Methods */}
         <section className="space-y-6">
           <h3 className="text-lg font-black text-brand-on-surface ml-2">Moyens de paiement</h3>
           <div className="space-y-3">
-            {methods.map((method) => (
-              <motion.button 
+            {PAYMENT_METHODS.map((method) => (
+              <motion.button
                 whileTap={{ scale: 0.98 }}
-                key={method.name} 
+                key={method.name}
                 onClick={() => setSelectedMethod(method.name)}
                 className={`w-full p-5 rounded-[1.75rem] flex items-center gap-5 transition-all outline-none ${
-                  selectedMethod === method.name 
-                    ? 'bg-brand-surface-lowest border-4 border-brand-primary shadow-xl scale-[1.02]' 
+                  selectedMethod === method.name
+                    ? 'bg-brand-surface-lowest border-4 border-brand-primary shadow-xl scale-[1.02]'
                     : 'bg-brand-surface-lowest border border-brand-outline/10 shadow-sm hover:border-brand-primary/20'
                 }`}
               >
@@ -184,7 +192,6 @@ export const PaymentScreen: React.FC = () => {
           </div>
         )}
 
-        {/* Secure Footer */}
         <div className="flex flex-col items-center gap-10">
           <div className="flex items-center justify-center gap-3 py-2 px-8 bg-brand-surface-low rounded-full border border-brand-outline/5 opacity-80">
             <Lock size={16} className="text-brand-primary" />
@@ -192,7 +199,7 @@ export const PaymentScreen: React.FC = () => {
           </div>
 
           <div className="w-full space-y-6">
-            <button 
+            <button
               disabled={loading}
               onClick={handlePayment}
               className="w-full h-16 bg-brand-primary text-white rounded-3xl font-black text-lg shadow-2xl active:scale-95 transition-all ring-8 ring-brand-primary/10 disabled:opacity-50 disabled:active:scale-100 flex items-center justify-center"
@@ -206,7 +213,7 @@ export const PaymentScreen: React.FC = () => {
                 `Payer ${total.toLocaleString()} FCFA`
               )}
             </button>
-            
+
             <div className="flex flex-col items-center gap-4">
               <button className="flex items-center gap-3 text-brand-primary font-black text-sm hover:underline hover:scale-105 transition-all">
                 <Download size={20} />

@@ -90,6 +90,38 @@ export const PRODUCTS: Product[] = [
     price: 2500,
     unit: 'Pack',
     image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC6KTrl7NDzMck2UcVkDF9Bp1hKukL3mCXpvM7mCWAuCm6d3Pmv8_kDyX2afwz5FNbbYPIaZMmm-vZ1GCvFzSNnoTUeSohEacjNmsDdVEoW5OCb07lQSBlILK92ToWnac2Z3Hzrn7PGE71Z35bfSw_UZPeDDtMuA9LJz0132Ma15cdlEsGraZV45NT-Q2df3hboR5DRgxdPk3dglCSfdHeAOVHMIG2zx6wh9E0GKvygfVZq4U_qKT4qivBO6NXmFT9cHHyOtHg5bYbo'
+  },
+  {
+    id: 'p5',
+    name: 'Beurre de Cacahuète (500g)',
+    category: 'Épicerie',
+    price: 2800,
+    unit: '500g',
+    image: 'https://images.unsplash.com/photo-1516685018646-549d2f93b09d?auto=format&fit=crop&q=80&w=800'
+  },
+  {
+    id: 'p6',
+    name: 'Savon Multi-usage',
+    category: 'Hygiène',
+    price: 950,
+    unit: 'Unité',
+    image: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&q=80&w=800'
+  },
+  {
+    id: 'p7',
+    name: 'Jus de Fruits (1L)',
+    category: 'Boissons',
+    price: 1800,
+    unit: '1L',
+    image: 'https://images.unsplash.com/photo-1497534446932-c925b458314e?auto=format&fit=crop&q=80&w=800'
+  },
+  {
+    id: 'p8',
+    name: 'Farine de Blé (5kg)',
+    category: 'Boulangerie',
+    price: 3500,
+    unit: '5kg',
+    image: 'https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&q=80&w=800'
   }
 ];
 

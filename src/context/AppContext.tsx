@@ -144,6 +144,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             livreurId: o.livreur_id,
             status: o.status,
             paymentStatus: o.payment_status,
+            paymentMethod: o.payment_method || undefined,
             items: o.items,
             total: o.total,
             deliveryFee: o.delivery_fee,

@@ -180,7 +180,7 @@ export const ProfileScreen: React.FC = () => {
 
       {/* Footer */}
       <div className="mt-10 text-center px-5">
-        <p className="text-xs text-brand-on-surface-variant">Cité Connect • Version Démo Investisseurs</p>
+        <p className="text-xs text-brand-on-surface-variant">Concorde Shop • Version Démo Investisseurs</p>
         <p className="text-[10px] text-brand-on-surface-variant/50 mt-1">© 2024 Tous droits réservés</p>
       </div>
     </div>

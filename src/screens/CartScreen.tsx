@@ -26,7 +26,7 @@ export const CartScreen: React.FC = () => {
   const total = subtotal + deliveryFee;
 
   const handleOrder = () => {
-    navigate('/orders/payment');
+    navigate('/orders/payment?purpose=order');
   };
 
   return (

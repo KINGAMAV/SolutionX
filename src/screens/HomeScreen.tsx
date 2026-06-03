@@ -110,7 +110,7 @@ export const HomeScreen: React.FC = () => {
 
             {/* 💰 Cotisation - Bouton fonctionnel UNIQUE */}
             <button 
-              onClick={() => navigate('/catalog?service=cotisation')}
+              onClick={() => navigate('/orders/payment?purpose=cotisation&amount=7500&description=Cotisation%20syndicale')}
               className="bg-brand-surface-low rounded-[2rem] p-5 h-44 flex flex-col justify-between border border-brand-outline/10 active:scale-[0.98] transition-transform text-left"
             >
               <div className="w-10 h-10 rounded-2xl bg-brand-secondary-fixed flex items-center justify-center text-brand-on-secondary">

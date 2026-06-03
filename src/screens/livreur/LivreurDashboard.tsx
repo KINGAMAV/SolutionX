@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Bike, MapPin, Package, CheckCircle2, ChevronRight, LogOut, 
   Clock, Route, Store, Compass, Play, FastForward, Award,
-  DollarSign, Star, TrendingUp, Car, Settings
+  DollarSign, Star, TrendingUp, Car, Settings, Phone, MessageSquare,
+  AlertCircle, Navigation
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { supabase } from '../../lib/supabase';
@@ -11,10 +12,25 @@ import { useNavigate } from 'react-router-dom';
 import { MOCK_ORDERS } from '../../data';
 import { Order } from '../../types';
 
+interface UnifiedMission {
+  id: string;
+  type: 'order' | 'parcel'; // order = commande boutique, parcel = colis
+  clientName: string;
+  clientPhone?: string;
+  pickupAddress?: string;
+  deliveryAddress: string;
+  description?: string;
+  estimatedPrice?: number;
+  total?: number;
+  status: string;
+  createdAt: string;
+  livreurId?: string;
+}
+
 export const LivreurDashboard: React.FC = () => {
   const { state, dispatch } = useApp();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'available' | 'active' | 'earnings'>('active');
+  const [activeTab, setActiveTab] = useState<'active' | 'available' | 'earnings'>('active');
 
   // État du simulateur de localisation
   const [isSharing, setIsSharing] = useState(false);
@@ -62,7 +78,7 @@ export const LivreurDashboard: React.FC = () => {
           }
           return next;
         });
-      }, 3000); // Mise à jour toutes les 3 secondes pour économiser la batterie/base
+      }, 3000);
     }
 
     return () => {
@@ -117,8 +133,12 @@ export const LivreurDashboard: React.FC = () => {
   const handleMarkAsDelivered = async () => {
     if (!activeDelivery) return;
     
+    // Déterminer la table et le champ ID approprié
+    const isParcel = activeDelivery.type === 'parcel';
+    const tableName = isParcel ? 'parcel_deliveries' : 'orders';
+    
     const { error } = await supabase
-      .from('orders')
+      .from(tableName)
       .update({ status: 'delivered' })
       .eq('id', activeDelivery.id);
 
@@ -126,7 +146,9 @@ export const LivreurDashboard: React.FC = () => {
       setProgress(1);
       setIsSharing(false);
       setSpeed('0 km/h');
-      alert("Félicitations ! Commande marquée comme Livrée avec succès !");
+      alert("Félicitations ! Livraison marquée comme complétée avec succès !");
+    } else {
+      alert("Erreur : " + error.message);
     }
   };
 
@@ -135,65 +157,140 @@ export const LivreurDashboard: React.FC = () => {
     localStorage.setItem('livreur_vehicle_SOL-92834', type);
   };
 
-  // Gestion des commandes réelles
-  const [realOrders, setRealOrders] = useState<any[]>([]);
+  // Gestion des missions unifiées (commandes + colis)
+  const [unifiedMissions, setUnifiedMissions] = useState<UnifiedMission[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchOrders = async () => {
+    const fetchMissions = async () => {
       setLoading(true);
-      const { data } = await supabase
+      
+      // Récupérer les commandes de boutiques
+      const { data: orders } = await supabase
         .from('orders')
         .select('*')
         .neq('status', 'delivered')
         .neq('status', 'cancelled')
         .order('created_at', { ascending: false });
       
-      if (data) setRealOrders(data);
+      // Récupérer les colis
+      const { data: parcels } = await supabase
+        .from('parcel_deliveries')
+        .select('*')
+        .neq('status', 'delivered')
+        .neq('status', 'cancelled')
+        .order('created_at', { ascending: false });
+
+      // Transformer les données en missions unifiées
+      const missions: UnifiedMission[] = [];
+
+      if (orders) {
+        orders.forEach(order => {
+          missions.push({
+            id: order.id,
+            type: 'order',
+            clientName: order.user_id ? `Client ${order.user_id.slice(0, 8)}` : 'Client',
+            deliveryAddress: 'Adresse de livraison',
+            total: order.total,
+            status: order.status,
+            createdAt: order.created_at,
+            livreurId: order.livreur_id
+          });
+        });
+      }
+
+      if (parcels) {
+        parcels.forEach(parcel => {
+          missions.push({
+            id: parcel.id,
+            type: 'parcel',
+            clientName: parcel.user_id ? `Résident ${parcel.user_id.slice(0, 8)}` : 'Résident',
+            pickupAddress: parcel.pickup_address,
+            deliveryAddress: parcel.delivery_address,
+            description: parcel.description,
+            estimatedPrice: parcel.estimated_price,
+            status: parcel.status,
+            createdAt: parcel.created_at,
+            livreurId: parcel.livreur_id
+          });
+        });
+      }
+
+      setUnifiedMissions(missions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
       setLoading(false);
     };
 
-    fetchOrders();
+    fetchMissions();
 
-    const channel = supabase
+    // Écouter les changements en temps réel
+    const ordersChannel = supabase
       .channel('livreur-orders')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
-        if (payload.eventType === 'INSERT') {
-          setRealOrders(prev => [payload.new, ...prev]);
-        } else if (payload.eventType === 'UPDATE') {
-          setRealOrders(prev => prev.map(o => o.id === payload.new.id ? payload.new : o).filter(o => o.status !== 'delivered' && o.status !== 'cancelled'));
-        }
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
+        fetchMissions();
+      })
+      .subscribe();
+
+    const parcelsChannel = supabase
+      .channel('livreur-parcels')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'parcel_deliveries' }, () => {
+        fetchMissions();
       })
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(ordersChannel);
+      supabase.removeChannel(parcelsChannel);
     };
   }, []);
 
-  const availableOrders = realOrders.filter(o => !o.livreur_id && o.status === 'ready');
-  const activeDelivery = realOrders.find(o => o.livreur_id === state.user?.id);
+  const availableMissions = unifiedMissions.filter(m => !m.livreurId && (m.status === 'ready' || m.status === 'confirmed'));
+  const activeDelivery = unifiedMissions.find(m => m.livreurId === state.user?.id);
 
-  const handleAcceptOrder = async (orderId: string) => {
+  const handleAcceptMission = async (missionId: string, type: 'order' | 'parcel') => {
+    const tableName = type === 'parcel' ? 'parcel_deliveries' : 'orders';
+    const newStatus = type === 'parcel' ? 'delivering' : 'delivering';
+    
     const { error } = await supabase
-      .from('orders')
+      .from(tableName)
       .update({ 
         livreur_id: state.user?.id,
-        status: 'delivering'
+        status: newStatus
       })
-      .eq('id', orderId);
+      .eq('id', missionId);
     
     if (error) alert("Erreur : " + error.message);
   };
 
-  const updateGPS = async (orderId: string, lat: number, lng: number) => {
+  const updateGPS = async (missionId: string, lat: number, lng: number) => {
+    if (!activeDelivery) return;
+    
+    const tableName = activeDelivery.type === 'parcel' ? 'parcel_deliveries' : 'orders';
+    
     await supabase
-      .from('orders')
+      .from(tableName)
       .update({ 
         latitude: lat,
         longitude: lng
       })
-      .eq('id', orderId);
+      .eq('id', missionId);
+  };
+
+  // Actions de communication rapide
+  const handleCallClient = (clientName: string) => {
+    alert(`Appel à ${clientName} en cours... (Simulation)`);
+  };
+
+  const handleSendMessage = (clientName: string, missionType: string) => {
+    const messages = {
+      order: "Je suis en route pour votre commande ! ⏱️",
+      parcel: "Je viens chercher votre colis ! 📦"
+    };
+    alert(`Message envoyé à ${clientName}: "${messages[missionType as keyof typeof messages]}"`);
+  };
+
+  const handleOpenMaps = (address: string) => {
+    const mapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(address)}`;
+    window.open(mapsUrl, '_blank');
   };
 
   // Données de revenus
@@ -247,16 +344,16 @@ export const LivreurDashboard: React.FC = () => {
             className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold text-sm transition-all w-full ${activeTab === 'active' ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/15' : 'text-brand-on-surface-variant hover:bg-brand-surface-low'}`}
           >
             <Route size={18} />
-            Ma course actuelle
+            Ma mission actuelle
           </button>
           <button 
             onClick={() => setActiveTab('available')}
             className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold text-sm transition-all w-full ${activeTab === 'available' ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/15' : 'text-brand-on-surface-variant hover:bg-brand-surface-low'}`}
           >
             <Package size={18} />
-            Courses disponibles
+            Missions disponibles
             <div className="ml-auto bg-brand-secondary-container text-brand-on-surface text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-black">
-              {availableOrders.length}
+              {availableMissions.length}
             </div>
           </button>
           <button 
@@ -290,10 +387,10 @@ export const LivreurDashboard: React.FC = () => {
             transition={{ duration: 0.25 }}
           >
             
-            {/* 1. COURSE ACTUELLE */}
+            {/* 1. MISSION ACTUELLE */}
             {activeTab === 'active' && (
               <div className="space-y-6 max-w-3xl">
-                <h2 className="text-2xl font-black text-brand-on-surface">Course active</h2>
+                <h2 className="text-2xl font-black text-brand-on-surface">Mission actuelle</h2>
                 
                 {activeDelivery ? (
                   <div className="space-y-6">
@@ -359,158 +456,196 @@ export const LivreurDashboard: React.FC = () => {
                         {!isSharing ? (
                           <button 
                             onClick={handleStartDelivery}
-                            className="flex-1 min-w-[150px] h-12 bg-brand-primary text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-md hover:bg-brand-primary/95 transition-all text-sm active:scale-95"
+                            className="flex-1 min-w-[150px] h-12 bg-brand-primary text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:shadow-lg transition-all active:scale-95"
                           >
-                            <Play size={16} />
-                            Démarrer le trajet
+                            <Play size={16} /> Démarrer la course
                           </button>
                         ) : (
                           <button 
                             onClick={handlePauseDelivery}
-                            className="flex-1 min-w-[150px] h-12 bg-brand-tertiary text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-md hover:bg-brand-tertiary/95 transition-all text-sm active:scale-95"
+                            className="flex-1 min-w-[150px] h-12 bg-orange-500 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:shadow-lg transition-all active:scale-95"
                           >
-                            <span className="flex gap-1 items-center justify-center shrink-0">
-                              <span className="w-1 h-3.5 bg-white rounded-full" />
-                              <span className="w-1 h-3.5 bg-white rounded-full" />
-                            </span>
-                            Pause
+                            <Clock size={16} /> Pause
                           </button>
                         )}
-
-                        {isSharing && progress < 1 && (
-                          <button 
-                            onClick={handleSpeedUp}
-                            className="px-5 h-12 bg-brand-secondary-container text-brand-on-surface rounded-xl font-bold flex items-center justify-center gap-2 border border-brand-outline/10 hover:bg-brand-secondary-container/90 transition-all text-sm active:scale-95"
-                          >
-                            <FastForward size={16} />
-                            Accélérer (+20%)
-                          </button>
-                        )}
+                        
+                        <button 
+                          onClick={handleSpeedUp}
+                          className="flex-1 min-w-[150px] h-12 bg-brand-secondary-container text-brand-on-surface rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:shadow-lg transition-all active:scale-95"
+                        >
+                          <FastForward size={16} /> Accélérer
+                        </button>
                       </div>
+
+                      <button 
+                        onClick={handleMarkAsDelivered}
+                        className="w-full h-12 bg-green-500 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:shadow-lg transition-all active:scale-95"
+                      >
+                        <CheckCircle2 size={16} /> Marquer comme livrée
+                      </button>
                     </div>
 
-                    {/* Delivery details card */}
-                    <div className="bg-brand-surface-lowest rounded-3xl p-6 shadow-md border border-brand-outline/10">
-                      <div className="flex justify-between items-start mb-6">
-                        <div>
-                          <span className="bg-brand-primary/10 text-brand-primary font-black px-3 py-1 rounded-lg text-sm border border-brand-primary/20">
-                            Commande #{activeDelivery.id.split('-')[1]}
-                          </span>
-                          <h3 className="font-bold text-xl mt-3 text-brand-on-surface">Client: Jean-Marc</h3>
+                    {/* DÉTAILS DE LA MISSION ACTUELLE */}
+                    <div className="bg-brand-surface-lowest rounded-3xl p-6 shadow-lg border border-brand-outline/10 space-y-4">
+                      <h3 className="font-black text-lg text-brand-on-surface flex items-center gap-2">
+                        {activeDelivery.type === 'order' ? <Store size={20} /> : <Package size={20} />}
+                        Détails de la mission
+                      </h3>
+
+                      <div className="space-y-3 bg-brand-surface-low p-4 rounded-2xl border border-brand-outline/10">
+                        <div className="flex justify-between items-start">
+                          <span className="text-xs font-bold text-brand-on-surface-variant">Client</span>
+                          <span className="font-bold text-brand-on-surface">{activeDelivery.clientName}</span>
                         </div>
-                        <div className="text-right">
-                          <p className="text-sm font-bold text-brand-on-surface-variant">À livrer d'ici</p>
-                          <p className="text-2xl font-black text-brand-on-surface">{activeDelivery.deliveryTime}</p>
+                        <div className="flex justify-between items-start">
+                          <span className="text-xs font-bold text-brand-on-surface-variant">Type</span>
+                          <span className="font-bold text-brand-on-surface capitalize">{activeDelivery.type === 'order' ? 'Commande Boutique' : 'Colis'}</span>
                         </div>
+                        {activeDelivery.pickupAddress && (
+                          <div className="flex justify-between items-start">
+                            <span className="text-xs font-bold text-brand-on-surface-variant">Récupération</span>
+                            <span className="font-bold text-brand-on-surface text-right">{activeDelivery.pickupAddress}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between items-start">
+                          <span className="text-xs font-bold text-brand-on-surface-variant">Livraison</span>
+                          <span className="font-bold text-brand-on-surface text-right">{activeDelivery.deliveryAddress}</span>
+                        </div>
+                        {activeDelivery.total && (
+                          <div className="flex justify-between items-start pt-2 border-t border-brand-outline/10">
+                            <span className="text-xs font-bold text-brand-on-surface-variant">Montant</span>
+                            <span className="font-black text-brand-primary">{activeDelivery.total} CFA</span>
+                          </div>
+                        )}
                       </div>
 
-                      <div className="relative pl-6 py-2 space-y-8 before:absolute before:inset-0 before:ml-[11px] before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-brand-outline/20 before:to-transparent">
-                        <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                          <div className="flex items-center justify-center w-6 h-6 rounded-full border-4 border-brand-surface-lowest bg-brand-tertiary text-white shadow shrink-0 z-10 -ml-[11px]">
-                            <Store size={10} />
-                          </div>
-                          <div className="w-[calc(100%-2.5rem)] md:w-[calc(50%-2.5rem)] px-4">
-                            <h4 className="font-bold text-brand-on-surface">Restaurant "Le Maquis"</h4>
-                            <p className="text-sm font-medium text-brand-on-surface-variant">Zone 4, Rue des Jardins</p>
-                          </div>
-                        </div>
-
-                        <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group">
-                          <div className="flex items-center justify-center w-6 h-6 rounded-full border-4 border-brand-surface-lowest bg-brand-primary text-white shrink-0 z-10 -ml-[11px]">
-                            <MapPin size={10} />
-                          </div>
-                          <div className="w-[calc(100%-2.5rem)] md:w-[calc(50%-2.5rem)] px-4">
-                            <h4 className="font-bold text-brand-on-surface">Domicile Client</h4>
-                            <p className="text-sm font-medium text-brand-on-surface-variant">Villa 124, Cocody</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="mt-8 pt-6 border-t border-brand-outline/10 space-y-4">
+                      {/* Actions de Communication Rapide */}
+                      <div className="flex gap-3">
                         <button 
-                          onClick={handleMarkAsDelivered}
-                          disabled={progress < 1}
-                          className={`w-full h-14 rounded-2xl font-bold shadow-lg transition-all text-lg flex items-center justify-center gap-2 ${
-                            progress >= 1 
-                              ? 'bg-brand-primary text-white active:scale-95 cursor-pointer' 
-                              : 'bg-brand-surface-high text-brand-outline opacity-60 cursor-not-allowed'
-                          }`}
+                          onClick={() => handleCallClient(activeDelivery.clientName)}
+                          className="flex-1 h-10 bg-blue-50 text-blue-600 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-blue-100 transition-all active:scale-95"
                         >
-                          <CheckCircle2 size={24} />
-                          {progress >= 1 ? 'Marquer comme Livré' : 'En cours de déplacement...'}
+                          <Phone size={16} /> Appeler
+                        </button>
+                        <button 
+                          onClick={() => handleSendMessage(activeDelivery.clientName, activeDelivery.type)}
+                          className="flex-1 h-10 bg-green-50 text-green-600 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-green-100 transition-all active:scale-95"
+                        >
+                          <MessageSquare size={16} /> Message
+                        </button>
+                        <button 
+                          onClick={() => handleOpenMaps(activeDelivery.deliveryAddress)}
+                          className="flex-1 h-10 bg-purple-50 text-purple-600 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-purple-100 transition-all active:scale-95"
+                        >
+                          <Navigation size={16} /> Maps
                         </button>
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="h-64 flex flex-col items-center justify-center text-brand-on-surface-variant bg-brand-surface-lowest rounded-3xl border border-dashed border-brand-outline/20">
-                    <CheckCircle2 size={48} className="mb-4 opacity-50" />
-                    <p className="font-bold">Vous n'avez aucune course en cours.</p>
-                    <button 
-                      onClick={() => setActiveTab('available')}
-                      className="mt-4 text-brand-primary font-bold hover:underline"
-                    >
-                      Voir les courses disponibles
-                    </button>
+                  <div className="bg-brand-surface-lowest rounded-3xl p-12 shadow-lg border-2 border-brand-outline/10 text-center space-y-4">
+                    <AlertCircle size={48} className="mx-auto text-brand-outline opacity-50" />
+                    <p className="text-brand-on-surface-variant font-bold">Aucune mission active pour le moment.</p>
+                    <p className="text-xs text-brand-outline">Consultez l'onglet "Missions disponibles" pour accepter une nouvelle mission.</p>
                   </div>
                 )}
               </div>
             )}
 
-            {/* 2. COURSES DISPONIBLES */}
+            {/* 2. MISSIONS DISPONIBLES */}
             {activeTab === 'available' && (
-              <div className="space-y-6 max-w-4xl">
-                <h2 className="text-2xl font-black text-brand-on-surface">Courses disponibles</h2>
-                <p className="text-brand-on-surface-variant font-medium">Acceptez une demande pour commencer la livraison.</p>
+              <div className="space-y-6 max-w-3xl">
+                <h2 className="text-2xl font-black text-brand-on-surface">Missions disponibles</h2>
+                
+                <div className="space-y-4">
+                  {availableMissions.length > 0 ? (
+                    availableMissions.map((mission) => (
+                      <motion.div
+                        key={mission.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-brand-surface-lowest rounded-2xl p-5 shadow-lg border border-brand-outline/10 hover:shadow-xl transition-all space-y-4"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              {mission.type === 'order' ? (
+                                <div className="px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-[10px] font-black">
+                                  COMMANDE
+                                </div>
+                              ) : (
+                                <div className="px-2 py-1 bg-purple-100 text-purple-700 rounded-lg text-[10px] font-black">
+                                  COLIS
+                                </div>
+                              )}
+                              <span className="text-[10px] font-bold text-brand-on-surface-variant">
+                                {new Date(mission.createdAt).toLocaleTimeString()}
+                              </span>
+                            </div>
+                            <h3 className="font-black text-brand-on-surface mb-2">{mission.clientName}</h3>
+                            
+                            <div className="space-y-2 text-sm">
+                              {mission.pickupAddress && (
+                                <div className="flex items-start gap-2 text-brand-on-surface-variant">
+                                  <MapPin size={14} className="mt-0.5 flex-shrink-0 text-orange-500" />
+                                  <span className="text-xs">Récupération: {mission.pickupAddress}</span>
+                                </div>
+                              )}
+                              <div className="flex items-start gap-2 text-brand-on-surface-variant">
+                                <MapPin size={14} className="mt-0.5 flex-shrink-0 text-green-500" />
+                                <span className="text-xs">Livraison: {mission.deliveryAddress}</span>
+                              </div>
+                            </div>
 
-                <div className="grid gap-4 mt-6">
-                  {availableOrders.map((order, i) => (
-                    <div key={i} className="bg-brand-surface-lowest rounded-2xl p-5 shadow-sm border border-brand-outline/10 flex flex-col md:flex-row md:items-center justify-between gap-4 group hover:shadow-md transition-shadow cursor-pointer">
-                      <div className="flex gap-4">
-                        <div className="w-12 h-12 bg-brand-surface-low rounded-xl flex items-center justify-center text-brand-on-surface-variant group-hover:bg-brand-primary/10 group-hover:text-brand-primary transition-colors">
-                          <Package size={24} />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-bold text-brand-on-surface">Commande #{order.id.split('-')[1]}</span>
-                            <span className="text-[10px] font-black uppercase text-brand-primary bg-brand-primary/10 px-2.5 py-0.5 rounded-full">
-                              + {order.deliveryFee} CFA
-                            </span>
+                            {mission.description && (
+                              <p className="text-xs text-brand-on-surface-variant mt-2 italic">{mission.description}</p>
+                            )}
                           </div>
-                          <div className="flex items-center gap-2 text-xs font-bold text-brand-on-surface-variant">
-                            <Clock size={12} /> Prêt à {order.createdAt}
-                          </div>
-                        </div>
-                      </div>
 
-                      <div className="flex items-center gap-3">
-                        <div className="text-right hidden md:block">
-                          <p className="text-sm font-bold text-brand-on-surface">Zone 4 → Cocody</p>
-                          <p className="text-xs font-medium text-brand-on-surface-variant">~ 4.2 km</p>
+                          <div className="text-right ml-4">
+                            {mission.total && (
+                              <div className="font-black text-brand-primary text-lg">{mission.total} CFA</div>
+                            )}
+                            {mission.estimatedPrice && (
+                              <div className="font-black text-brand-primary text-lg">{mission.estimatedPrice} CFA</div>
+                            )}
+                          </div>
                         </div>
-                        <button 
-                          onClick={() => handleAcceptOrder(order.id)}
-                          className="flex-1 md:flex-none border-2 border-brand-primary text-brand-primary hover:bg-brand-primary hover:text-white px-6 py-2.5 rounded-xl font-bold transition-colors"
-                        >
-                          Accepter la course
-                        </button>
-                      </div>
+
+                        {/* Actions rapides pour les missions disponibles */}
+                        <div className="flex gap-2 pt-3 border-t border-brand-outline/10">
+                          <button 
+                            onClick={() => handleAcceptMission(mission.id, mission.type)}
+                            className="flex-1 h-10 bg-brand-primary text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:shadow-lg transition-all active:scale-95"
+                          >
+                            <CheckCircle2 size={16} /> Accepter
+                          </button>
+                          <button 
+                            onClick={() => handleOpenMaps(mission.deliveryAddress)}
+                            className="h-10 px-4 bg-brand-surface-low text-brand-primary rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-brand-surface-low/80 transition-all active:scale-95"
+                          >
+                            <Navigation size={16} />
+                          </button>
+                        </div>
+                      </motion.div>
+                    ))
+                  ) : (
+                    <div className="bg-brand-surface-lowest rounded-3xl p-12 shadow-lg border-2 border-brand-outline/10 text-center space-y-4">
+                      <Package size={48} className="mx-auto text-brand-outline opacity-50" />
+                      <p className="text-brand-on-surface-variant font-bold">Aucune mission disponible pour le moment.</p>
+                      <p className="text-xs text-brand-outline">Revenez plus tard ou vérifiez votre statut de disponibilité.</p>
                     </div>
-                  ))}
-                  
-                  {availableOrders.length === 0 && (
-                    <p className="text-center text-brand-on-surface-variant py-10 font-bold">Aucune course pour le moment.</p>
                   )}
                 </div>
               </div>
             )}
 
-            {/* 3. HISTORIQUE & REVENUS (NOUVEAU COMPTE LIVREUR PREMIUM !) */}
+            {/* 3. HISTORIQUE & REVENUS */}
             {activeTab === 'earnings' && (
               <div className="space-y-6 max-w-4xl">
                 <div>
                   <h2 className="text-2xl font-black text-brand-on-surface">Rapport d'Activité & Revenus</h2>
-                  <p className="text-brand-on-surface-variant font-medium mt-1">Analyser vos gains, courses terminées et vos notes.</p>
+                  <p className="text-brand-on-surface-variant font-medium mt-1">Analyser vos gains, missions terminées et vos notes.</p>
                 </div>
 
                 {/* Métriques */}
@@ -528,8 +663,8 @@ export const LivreurDashboard: React.FC = () => {
 
                   <div className="bg-brand-surface-lowest p-6 rounded-[2rem] border border-brand-outline/10 shadow-sm flex items-center justify-between">
                     <div>
-                      <span className="text-[10px] font-black text-brand-on-surface-variant uppercase tracking-wider">Courses Terminées</span>
-                      <h3 className="text-2xl font-black text-brand-on-surface mt-1">34 courses</h3>
+                      <span className="text-[10px] font-black text-brand-on-surface-variant uppercase tracking-wider">Missions Terminées</span>
+                      <h3 className="text-2xl font-black text-brand-on-surface mt-1">34 missions</h3>
                       <p className="text-[10px] font-bold text-brand-outline mt-0.5">Taux de réussite : 100%</p>
                     </div>
                     <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
@@ -551,7 +686,7 @@ export const LivreurDashboard: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Graphique de revenus des 5 derniers jours (Visual Flex columns) */}
+                {/* Graphique de revenus des 5 derniers jours */}
                 <div className="bg-brand-surface-lowest p-8 rounded-[2.5rem] border border-brand-outline/10 shadow-sm space-y-6">
                   <div className="flex justify-between items-center border-b border-brand-outline/10 pb-4">
                     <h3 className="font-black text-lg text-brand-on-surface">Historique de vos gains journaliers</h3>
@@ -562,13 +697,11 @@ export const LivreurDashboard: React.FC = () => {
 
                   <div className="h-64 flex items-end justify-between gap-4 pt-8 px-4">
                     {dailyEarnings.map((item, index) => {
-                      // Calculer la hauteur relative (la valeur max est 18500)
                       const pct = (item.value / 18500) * 100;
                       return (
                         <div key={index} className="flex-1 flex flex-col items-center gap-3 h-full justify-end">
                           <span className="text-xs font-black text-brand-on-surface">{item.value} CFA</span>
                           
-                          {/* Bar block with dynamic height */}
                           <div className="w-full bg-brand-surface-low rounded-t-2xl overflow-hidden relative h-40 flex items-end shadow-inner">
                             <motion.div 
                               className="w-full bg-gradient-to-t from-brand-primary to-brand-primary-container rounded-t-2xl"
@@ -592,14 +725,14 @@ export const LivreurDashboard: React.FC = () => {
         </AnimatePresence>
       </main>
 
-      {/* Mobile Bottom Navigation Bar (Mobile only) */}
+      {/* Mobile Bottom Navigation Bar */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-brand-surface-lowest/95 backdrop-blur-md border-t border-brand-outline/10 py-3.5 px-6 flex justify-around items-center z-40 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
         <button 
           onClick={() => setActiveTab('active')}
           className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'active' ? 'text-brand-primary scale-105' : 'text-brand-on-surface-variant opacity-70'}`}
         >
           <Route size={20} />
-          <span className="text-[10px] font-black tracking-wide">Course</span>
+          <span className="text-[10px] font-black tracking-wide">Mission</span>
         </button>
         
         <button 
@@ -607,9 +740,9 @@ export const LivreurDashboard: React.FC = () => {
           className={`flex flex-col items-center gap-1 transition-all relative ${activeTab === 'available' ? 'text-brand-primary scale-105' : 'text-brand-on-surface-variant opacity-70'}`}
         >
           <Package size={20} />
-          {availableOrders.length > 0 && (
+          {availableMissions.length > 0 && (
             <span className="absolute -top-1.5 -right-2 bg-brand-primary text-white text-[8px] font-black w-4 h-4 flex items-center justify-center rounded-full">
-              {availableOrders.length}
+              {availableMissions.length}
             </span>
           )}
           <span className="text-[10px] font-black tracking-wide">Dispos</span>

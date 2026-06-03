@@ -1,6 +1,6 @@
 {
-  "name": "Cité Connect",
-  "description": "Votre plateforme communautaire pour simplifier la vie quotidienne : services, courses et artisans au cœur de votre cité.",
+  "name": "Concorde Shop",
+  "description": "Votre boutique connectée pour simplifier les achats et services de votre communauté.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

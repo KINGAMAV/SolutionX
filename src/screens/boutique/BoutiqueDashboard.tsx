@@ -476,6 +476,25 @@ export const BoutiqueDashboard: React.FC = () => {
                   </div>
                 </div>
 
+                <div className="bg-brand-surface-lowest p-6 rounded-[2rem] border border-brand-outline/10 shadow-sm space-y-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-brand-primary/10 text-brand-primary rounded-2xl flex items-center justify-center">
+                      <DollarSign size={24} />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-black text-brand-on-surface-variant uppercase tracking-wider">Abonnement Boutique</span>
+                      <h3 className="text-xl font-black text-brand-on-surface mt-1">12 000 CFA / mois</h3>
+                    </div>
+                  </div>
+                  <p className="text-sm text-brand-on-surface-variant">Paiement fictif via Wave, Moov Money, Orange Money ou MTN MoMo pour votre abonnement boutique.</p>
+                  <button
+                    onClick={() => navigate('/orders/payment?purpose=boutique_fee&amount=12000&description=Abonnement%20boutique%20mensuel')}
+                    className="w-full py-4 bg-brand-tertiary text-brand-on-tertiary rounded-3xl font-black hover:bg-brand-tertiary/95 transition-all"
+                  >
+                    Payer les frais maintenant
+                  </button>
+                </div>
+
                 {/* Graphique de ventes des 7 jours */}
                 <div className="bg-brand-surface-lowest p-8 rounded-[2.5rem] border border-brand-outline/10 shadow-sm space-y-6">
                   <div className="flex justify-between items-center border-b border-brand-outline/10 pb-4">
