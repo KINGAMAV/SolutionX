@@ -39,28 +39,73 @@ export const LoginScreen: React.FC = () => {
     }
   };
 
-  const handleDemoLogin = async (role: string) => {
-    setDemoLoading(role);
+  // Données de démo pour chaque rôle
+  const demoUsers = {
+    admin: {
+      id: 'demo-admin-001',
+      name: 'Admin Démo',
+      email: 'admin@demo.com',
+      houseNumber: 'HQ',
+      avatar: 'https://i.pravatar.cc/150?img=1',
+      role: 'admin' as const,
+    },
+    livreur: {
+      id: 'demo-livreur-001',
+      name: 'Livreur Démo',
+      email: 'livreur@demo.com',
+      houseNumber: 'Zone 4',
+      avatar: 'https://i.pravatar.cc/150?img=2',
+      role: 'livreur' as const,
+    },
+    client: {
+      id: 'demo-client-001',
+      name: 'Client Démo',
+      email: 'client@demo.com',
+      houseNumber: 'Villa 123',
+      avatar: 'https://i.pravatar.cc/150?img=3',
+      role: 'client' as const,
+    },
+    boutique: {
+      id: 'demo-boutique-001',
+      name: 'Boutique Démo',
+      email: 'boutique@demo.com',
+      houseNumber: 'Marché',
+      avatar: 'https://i.pravatar.cc/150?img=4',
+      role: 'boutique' as const,
+    },
+    syndics: {
+      id: 'demo-syndics-001',
+      name: 'Syndic Démo',
+      email: 'syndic@demo.com',
+      houseNumber: 'Immeuble A',
+      avatar: 'https://i.pravatar.cc/150?img=5',
+      role: 'syndics' as const,
+    },
+    artisan: {
+      id: 'demo-artisan-001',
+      name: 'Prestataire Démo',
+      email: 'prestataire@demo.com',
+      houseNumber: 'Atelier B',
+      avatar: 'https://i.pravatar.cc/150?img=6',
+      role: 'artisan' as const,
+    },
+  };
+
+  const handleDemoLogin = async (roleKey: keyof typeof demoUsers) => {
+    setDemoLoading(roleKey);
     setError('');
     setSuccess('');
     try {
-      const email = `${role}@demo.com`;
-      const password = 'password123'; // Mot de passe générique pour la démo
-
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email: email,
-        password: password,
-      });
-
-      if (authError) {
-        setError(`Erreur de connexion pour ${role}: ` + authError.message);
-        setDemoLoading(null);
-        return;
-      }
-
-      if (authData?.user) {
-        navigate(getRoleHomeRoute(role));
-      }
+      const demoUser = demoUsers[roleKey];
+      
+      // Simuler une connexion réussie en mettant à jour l'état global
+      // sans vérifier réellement Supabase Auth
+      dispatch({ type: 'SET_USER', payload: demoUser });
+      
+      // Attendre un peu pour que le state se mette à jour
+      setTimeout(() => {
+        navigate(getRoleHomeRoute(demoUser.role));
+      }, 300);
     } catch (err: any) {
       setError("Une erreur inattendue est survenue lors de la connexion démo : " + err.message);
     } finally {
@@ -278,17 +323,17 @@ export const LoginScreen: React.FC = () => {
             </div>
 
             {/* Boutons de connexion rapide pour la démo */}
-            <div className="flex flex-col gap-3 mt-6">
-              <p className="text-center text-sm font-bold text-brand-on-surface-variant">Connexion rapide (Démo) :</p>
-              <div className="grid grid-cols-2 gap-3">
-                {[ 'admin', 'livreur', 'client', 'boutique', 'syndics', 'artisan' ].map((role) => (
+            <div className="flex flex-col gap-3 mt-6 pt-4 border-t border-brand-outline/20">
+              <p className="text-center text-xs font-bold text-brand-on-surface-variant uppercase tracking-widest">Connexion rapide (Démo) :</p>
+              <div className="grid grid-cols-2 gap-2">
+                {(Object.keys(demoUsers) as Array<keyof typeof demoUsers>).map((roleKey) => (
                   <button
-                    key={role}
-                    onClick={() => handleDemoLogin(role)}
-                    disabled={demoLoading === role || loading}
-                    className={`w-full h-12 bg-brand-secondary-container text-brand-on-secondary-container rounded-xl font-bold shadow-md active:scale-95 transition-all text-sm disabled:opacity-60 flex items-center justify-center`}
+                    key={roleKey}
+                    onClick={() => handleDemoLogin(roleKey)}
+                    disabled={demoLoading === roleKey || loading}
+                    className={`w-full h-11 bg-brand-secondary-container text-brand-on-secondary-container rounded-xl font-bold shadow-md active:scale-95 transition-all text-xs disabled:opacity-60 flex items-center justify-center`}
                   >
-                    {demoLoading === role ? 'Connexion...' : role.charAt(0).toUpperCase() + role.slice(1)}
+                    {demoLoading === roleKey ? 'Connexion...' : roleKey === 'artisan' ? 'Prestataire' : roleKey === 'syndics' ? 'Syndic' : roleKey.charAt(0).toUpperCase() + roleKey.slice(1)}
                   </button>
                 ))}
               </div>
