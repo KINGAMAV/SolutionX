@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Header } from '../components/Header';
+import { AdBanner } from '../components/AdBanner';
 import { ShoppingBasket, Construction, Bike, Wallet, ChevronRight, Truck, Flame } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
@@ -23,6 +24,9 @@ export const HomeScreen: React.FC = () => {
           <h1 className="text-2xl font-bold text-brand-on-surface">Bonjour, {state.user?.name || 'Voisin'}</h1>
           <p className="text-brand-on-surface-variant font-medium">Ravi de vous revoir dans votre communauté.</p>
         </section>
+
+        {/* Ad Banner - Géré par Admin */}
+        <AdBanner />
 
         {/* Activity Tracking Card */}
         <button 

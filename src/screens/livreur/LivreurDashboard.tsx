@@ -275,6 +275,10 @@ export const LivreurDashboard: React.FC = () => {
       .eq('id', missionId);
   };
 
+  const currentLatitude = 5.3164 + progress * 0.032;
+  const currentLongitude = -3.9875 - progress * 0.014;
+  const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${currentLongitude - 0.012}%2C${currentLatitude - 0.008}%2C${currentLongitude + 0.012}%2C${currentLatitude + 0.008}&layer=mapnik&marker=${currentLatitude}%2C${currentLongitude}`;
+
   // Actions de communication rapide
   const handleCallClient = (clientName: string) => {
     alert(`Appel à ${clientName} en cours... (Simulation)`);
@@ -392,6 +396,25 @@ export const LivreurDashboard: React.FC = () => {
               <div className="space-y-6 max-w-3xl">
                 <h2 className="text-2xl font-black text-brand-on-surface">Mission actuelle</h2>
                 
+                <div className="bg-brand-surface-lowest rounded-3xl border border-brand-outline/10 overflow-hidden shadow-sm">
+                  <div className="px-5 py-4 bg-brand-background/80 border-b border-brand-outline/10 flex items-center justify-between">
+                    <div>
+                      <h3 className="font-black text-base text-brand-on-surface">Carte de géolocalisation</h3>
+                      <p className="text-[11px] text-brand-on-surface-variant">Position actuelle du livreur.</p>
+                    </div>
+                    <span className="text-[11px] font-bold text-brand-primary">{isSharing ? 'En route' : 'Hors service'}</span>
+                  </div>
+                  <div className="h-64 sm:h-72">
+                    <iframe
+                      title="Carte du livreur"
+                      src={mapUrl}
+                      className="w-full h-full border-0"
+                      allowFullScreen
+                      loading="lazy"
+                    />
+                  </div>
+                </div>
+
                 {activeDelivery ? (
                   <div className="space-y-6">
                     
@@ -448,8 +471,27 @@ export const LivreurDashboard: React.FC = () => {
                           />
                         </div>
                         <p className="text-[10px] font-bold text-brand-outline font-mono">
-                          GPS SIM: {(5.3164 + progress * 0.032).toFixed(5)}, {(-3.9875 - progress * 0.014).toFixed(5)}
+                          GPS SIM: {currentLatitude.toFixed(5)}, {currentLongitude.toFixed(5)}
                         </p>
+                      </div>
+
+                      <div className="bg-brand-surface-lowest rounded-3xl border border-brand-outline/10 overflow-hidden shadow-sm">
+                        <div className="px-5 py-4 bg-brand-background/80 border-b border-brand-outline/10 flex items-center justify-between">
+                          <div>
+                            <h3 className="font-black text-base text-brand-on-surface">Carte de géolocalisation</h3>
+                            <p className="text-[11px] text-brand-on-surface-variant">Position actuelle du livreur en temps réel.</p>
+                          </div>
+                          <span className="text-[11px] font-bold text-brand-primary">{isSharing ? 'En route' : 'En pause'}</span>
+                        </div>
+                        <div className="h-64 sm:h-72">
+                          <iframe
+                            title="Carte du livreur"
+                            src={mapUrl}
+                            className="w-full h-full border-0"
+                            allowFullScreen
+                            loading="lazy"
+                          />
+                        </div>
                       </div>
 
                       <div className="flex flex-wrap gap-3">

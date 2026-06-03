@@ -1,73 +1,123 @@
-import { useEffect, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
-import { ChevronRight, Megaphone } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Megaphone } from 'lucide-react';
 
-// Mock data (sera connecté à une table `ads` plus tard)
-const ADS = [
-  { id: 1, brand: 'Orange CI', title: 'Fibre Optique à -30%', subtitle: 'Offre limitée résidence', color: 'from-orange-500 to-orange-600' },
-  { id: 2, brand: 'MTN MoMo', title: 'Cashback 10%', subtitle: 'Sur tous vos retraits', color: 'from-yellow-400 to-yellow-500' },
-  { id: 3, brand: 'Gaz Express', title: 'Livraison offerte', subtitle: '1ère commande > 10.000 FCFA', color: 'from-[#00843D] to-[#006b31]' },
-  { id: 4, brand: 'Syndic Résidence', title: 'AG Annuelle', subtitle: 'Samedi 15h • Salle commune', color: 'from-[#003366] to-[#002244]' },
+export interface Advertisement {
+  id: string;
+  brand: string;
+  title: string;
+  subtitle: string;
+  color: string;
+  isActive: boolean;
+  durationDays: number;
+  startDate: string;
+  endDate: string;
+}
+
+// Mock data par défaut
+const DEFAULT_ADS: Advertisement[] = [
+  { 
+    id: 'ad-1', 
+    brand: 'Orange CI', 
+    title: 'Fibre Optique à -30%', 
+    subtitle: 'Offre limitée résidence', 
+    color: 'from-orange-500 to-orange-600', 
+    isActive: true,
+    durationDays: 30,
+    startDate: new Date().toISOString(),
+    endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+  },
+  { 
+    id: 'ad-2', 
+    brand: 'MTN MoMo', 
+    title: 'Cashback 10%', 
+    subtitle: 'Sur tous vos retraits', 
+    color: 'from-yellow-400 to-yellow-500', 
+    isActive: true,
+    durationDays: 30,
+    startDate: new Date().toISOString(),
+    endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+  },
+  { 
+    id: 'ad-3', 
+    brand: 'Gaz Express', 
+    title: 'Livraison offerte', 
+    subtitle: '1ère commande > 10.000 FCFA', 
+    color: 'from-[#00843D] to-[#006b31]', 
+    isActive: true,
+    durationDays: 30,
+    startDate: new Date().toISOString(),
+    endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+  },
 ];
 
 export const AdBanner = () => {
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [ads, setAds] = useState<Advertisement[]>(DEFAULT_ADS);
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // Auto-scroll toutes les 4s
+  // Charger les publicités depuis localstorage
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentIndex(prev => (prev + 1) % ADS.length);
-    }, 4000);
-    return () => clearInterval(interval);
+    const savedAds = localStorage.getItem('concorde_ads');
+    if (savedAds) {
+      try {
+        const parsed = JSON.parse(savedAds);
+        // Filtrer les pubs actives et non expirées
+        const now = new Date();
+        const activeAds = parsed.filter((ad: Advertisement) => {
+          const isActive = ad.isActive;
+          const isNotExpired = new Date(ad.endDate) > now;
+          return isActive && isNotExpired;
+        });
+        setAds(activeAds.length > 0 ? activeAds : DEFAULT_ADS);
+      } catch {
+        setAds(DEFAULT_ADS);
+      }
+    }
   }, []);
 
-  // Scroll automatique vers l'item actif
   useEffect(() => {
-    if (scrollRef.current) {
-      const cardWidth = scrollRef.current.children[0]?.clientWidth || 0;
-      const gap = 12; // gap-3 = 12px
-      scrollRef.current.scrollTo({ left: currentIndex * (cardWidth + gap), behavior: 'smooth' });
-    }
-  }, [currentIndex]);
+    if (ads.length === 0) return;
+    const interval = setInterval(() => {
+      setCurrentIndex(prev => (prev + 1) % ads.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [ads.length]);
+
+  if (ads.length === 0) return null;
+
+  const currentAd = ads[currentIndex];
+  const daysRemaining = Math.max(0, Math.ceil((new Date(currentAd.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)));
 
   return (
-    <section className="relative mb-6">
-      <div className="flex items-center justify-between mb-3 px-1">
-        <div className="flex items-center gap-2">
-          <Megaphone className="w-4 h-4 text-brand-primary" />
-          <span className="text-sm font-bold text-brand-on-surface">Annonces & Promos</span>
-        </div>
-        <span className="text-xs text-brand-on-surface-variant">{currentIndex + 1} / {ADS.length}</span>
+    <section className="relative mb-6 overflow-hidden">
+      <div className="flex items-center gap-2 mb-3 px-1">
+        <Megaphone className="w-4 h-4 text-brand-primary flex-shrink-0" />
+        <span className="text-sm font-bold text-brand-on-surface">Annonces & Promos</span>
       </div>
 
-      <div 
-        ref={scrollRef}
-        className="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-2"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-      >
-        {ADS.map((ad, i) => (
+      <div className="relative w-full overflow-hidden bg-brand-surface-lowest/40 rounded-2xl h-48">
+        <AnimatePresence mode="wait">
           <motion.div
-            key={ad.id}
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: i * 0.05 }}
-            className={`snap-center shrink-0 w-[280px] h-36 rounded-2xl bg-gradient-to-br ${ad.color} p-4 flex flex-col justify-between shadow-md relative overflow-hidden cursor-pointer active:scale-[0.98] transition-transform`}
+            key={currentAd.id}
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -50 }}
+            transition={{ duration: 0.8, ease: 'easeOut' }}
+            className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${currentAd.color} p-6 flex flex-col justify-between shadow-lg overflow-hidden`}
           >
-            {/* Effet décoratif */}
-            <div className="absolute -right-6 -top-6 w-24 h-24 bg-white/10 rounded-full blur-2xl" />
-            
+            <div className="absolute -right-10 -top-10 w-28 h-28 bg-white/10 rounded-full blur-3xl" />
             <div className="relative z-10">
-              <span className="text-white/90 text-xs font-bold uppercase tracking-wider">{ad.brand}</span>
-              <h3 className="text-white text-lg font-bold leading-tight mt-1">{ad.title}</h3>
-              <p className="text-white/80 text-xs mt-0.5">{ad.subtitle}</p>
+              <span className="text-white/90 text-xs font-bold uppercase tracking-wider">{currentAd.brand}</span>
+              <h3 className="text-white text-3xl font-black leading-tight mt-3">{currentAd.title}</h3>
+              <p className="text-white/80 text-sm mt-2 max-w-xl">{currentAd.subtitle}</p>
             </div>
-            
-            <div className="relative z-10 flex justify-end">
-              <ChevronRight className="w-5 h-5 text-white/70" />
+
+            <div className="relative z-10 flex items-center justify-between text-white/90 text-sm font-bold">
+              <span>{currentIndex + 1} / {ads.length}</span>
+              <span>{daysRemaining}j restants</span>
             </div>
           </motion.div>
-        ))}
+        </AnimatePresence>
       </div>
     </section>
   );

@@ -3,13 +3,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, Grid, Store, Shield, LogOut, CheckCircle2, Trash2, Edit2, 
   MapPin, Bike, Eye, PlusCircle, Check, X, ShieldAlert, Award, Star,
-  Sliders, MessageSquare, AlertCircle, Send, CheckSquare
+  Sliders, MessageSquare, AlertCircle, Send, CheckSquare, Megaphone
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { supabase } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { UserRole, User, Boutique, Artisan } from '../../types';
 import { MOCK_USERS, ARTISANS } from '../../data';
+import { Advertisement } from '../../components/AdBanner';
+
 
 // Component drawing a gorgeous, simulated vector tracking map using SVG
 const VectorTrackingMap: React.FC<{ progress: number; speed: string; status: string }> = ({ progress, speed, status }) => {
@@ -140,7 +142,7 @@ export const AdminDashboard: React.FC = () => {
   const isAgent = state.user?.role === 'agent';
   
   // Onglets du dashboard
-  const [activeTab, setActiveTab] = useState<'overview' | 'accounts' | 'boutiques' | 'livreurs' | 'artisans' | 'clients' | 'create_pro' | 'system_config' | 'helpdesk'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'accounts' | 'boutiques' | 'livreurs' | 'artisans' | 'clients' | 'create_pro' | 'system_config' | 'helpdesk' | 'ads'>('overview');
   
   // États locaux des données chargées depuis Supabase
   const [users, setUsers] = useState<User[]>([]);
@@ -149,6 +151,20 @@ export const AdminDashboard: React.FC = () => {
   const [stats, setStats] = useState({ clients: 0, boutiques: 0, livreurs: 0, artisans: 0 });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  
+  // Gestion des Publicités
+  const defaultAds: Advertisement[] = [
+    { id: 'ad-1', brand: 'Orange CI', title: 'Fibre Optique à -30%', subtitle: 'Offre limitée résidence', color: 'from-orange-500 to-orange-600', isActive: true, durationDays: 30, startDate: new Date().toISOString(), endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() },
+    { id: 'ad-2', brand: 'MTN MoMo', title: 'Cashback 10%', subtitle: 'Sur tous vos retraits', color: 'from-yellow-400 to-yellow-500', isActive: true, durationDays: 30, startDate: new Date().toISOString(), endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() },
+    { id: 'ad-3', brand: 'Gaz Express', title: 'Livraison offerte', subtitle: '1ère commande > 10.000 FCFA', color: 'from-[#00843D] to-[#006b31]', isActive: true, durationDays: 30, startDate: new Date().toISOString(), endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() },
+  ];
+  const [adFormData, setAdFormData] = useState({
+    brand: '',
+    title: '',
+    subtitle: '',
+    color: 'from-orange-500 to-orange-600',
+    durationDays: 30
+  });
   
   // Configuration Globale
   const [sysConfig, setSysConfig] = useState({
@@ -557,6 +573,7 @@ export const AdminDashboard: React.FC = () => {
             { id: 'clients', label: "Clients", icon: Users },
             { id: 'create_pro', label: "Créer un Pro", icon: PlusCircle },
             { id: 'helpdesk', label: "Boîte Support", icon: MessageSquare },
+            { id: 'ads', label: "Publicités", icon: Megaphone },
             ...(!isAgent ? [{ id: 'system_config', label: "Config Globale", icon: Sliders }] : [])
           ].map((tab) => {
             const Icon = tab.icon;
@@ -1309,6 +1326,162 @@ export const AdminDashboard: React.FC = () => {
               </div>
             )}
 
+            {/* TONGLET 10: GESTION DES PUBLICITÉS */}
+            {activeTab === 'ads' && (
+              <div className="space-y-6 max-w-4xl">
+                <div>
+                  <h2 className="text-2xl font-black text-brand-on-surface">Gestion des Publicités</h2>
+                  <p className="text-brand-on-surface-variant font-medium mt-1">Créer et gérer les publicités affichées aux utilisateurs. Facturable aux entreprises.</p>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Formulaire de création/édition */}
+                  <div className="lg:col-span-1 bg-brand-surface-lowest rounded-3xl p-6 border border-brand-outline/10 shadow-sm">
+                    <h3 className="font-black text-brand-on-surface mb-4">Nouvelle Publicité</h3>
+                    <form className="space-y-4">
+                      <div>
+                        <label className="text-xs font-bold text-brand-on-surface-variant uppercase mb-2 block">Entreprise / Marque</label>
+                        <input 
+                          type="text" 
+                          placeholder="Ex: Orange CI"
+                          value={adFormData.brand}
+                          onChange={(e) => setAdFormData({...adFormData, brand: e.target.value})}
+                          className="w-full px-4 py-2.5 bg-brand-surface border border-brand-outline/20 rounded-xl focus:ring-2 focus:ring-brand-primary outline-none transition-all text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-brand-on-surface-variant uppercase mb-2 block">Titre</label>
+                        <input 
+                          type="text" 
+                          placeholder="Ex: Fibre Optique à -30%"
+                          value={adFormData.title}
+                          onChange={(e) => setAdFormData({...adFormData, title: e.target.value})}
+                          className="w-full px-4 py-2.5 bg-brand-surface border border-brand-outline/20 rounded-xl focus:ring-2 focus:ring-brand-primary outline-none transition-all text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-brand-on-surface-variant uppercase mb-2 block">Sous-titre</label>
+                        <input 
+                          type="text" 
+                          placeholder="Ex: Offre limitée résidence"
+                          value={adFormData.subtitle}
+                          onChange={(e) => setAdFormData({...adFormData, subtitle: e.target.value})}
+                          className="w-full px-4 py-2.5 bg-brand-surface border border-brand-outline/20 rounded-xl focus:ring-2 focus:ring-brand-primary outline-none transition-all text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-brand-on-surface-variant uppercase mb-2 block">Couleur (Gradient)</label>
+                        <select 
+                          value={adFormData.color}
+                          onChange={(e) => setAdFormData({...adFormData, color: e.target.value})}
+                          className="w-full px-4 py-2.5 bg-brand-surface border border-brand-outline/20 rounded-xl focus:ring-2 focus:ring-brand-primary outline-none transition-all text-sm"
+                        >
+                          <option value="from-orange-500 to-orange-600">🟠 Orange</option>
+                          <option value="from-blue-500 to-blue-600">🔵 Bleu</option>
+                          <option value="from-green-500 to-green-600">🟢 Vert</option>
+                          <option value="from-purple-500 to-purple-600">🟣 Violet</option>
+                          <option value="from-pink-500 to-pink-600">🌸 Rose</option>
+                          <option value="from-yellow-400 to-yellow-500">🟡 Jaune</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-brand-on-surface-variant uppercase mb-2 block">Durée (jours)</label>
+                        <div className="flex gap-2 items-center">
+                          <input 
+                            type="range" 
+                            min="1" 
+                            max="365" 
+                            value={adFormData.durationDays}
+                            onChange={(e) => setAdFormData({...adFormData, durationDays: parseInt(e.target.value)})}
+                            className="flex-1 h-2 bg-brand-surface rounded-lg appearance-none cursor-pointer"
+                          />
+                          <span className="text-sm font-bold text-brand-primary w-12 text-right">{adFormData.durationDays}j</span>
+                        </div>
+                        <p className="text-[10px] text-brand-on-surface-variant mt-2">
+                          Fin: {new Date(Date.now() + adFormData.durationDays * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR')}
+                        </p>
+                      </div>
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          if (adFormData.brand && adFormData.title && adFormData.subtitle) {
+                            const newAd: Advertisement = {
+                              id: `ad-${Date.now()}`,
+                              ...adFormData,
+                              isActive: true,
+                              startDate: new Date().toISOString(),
+                              endDate: new Date(Date.now() + adFormData.durationDays * 24 * 60 * 60 * 1000).toISOString()
+                            };
+                            const updated = [...defaultAds, newAd];
+                            localStorage.setItem('concorde_ads', JSON.stringify(updated));
+                            setAdFormData({ brand: '', title: '', subtitle: '', color: 'from-orange-500 to-orange-600', durationDays: 30 });
+                            alert('✅ Publicité créée et publiée !');
+                          } else {
+                            alert('⚠️ Remplissez tous les champs');
+                          }
+                        }}
+                        className="w-full py-3 bg-brand-primary text-white font-bold rounded-xl hover:bg-brand-primary/95 transition-all active:scale-95"
+                      >
+                        Créer & Publier
+                      </button>
+                    </form>
+                  </div>
+
+                  {/* Liste des publicités */}
+                  <div className="lg:col-span-2 bg-brand-surface-lowest rounded-3xl border border-brand-outline/10 shadow-sm overflow-hidden">
+                    <div className="px-6 py-4 bg-brand-surface-low border-b border-brand-outline/10 font-black text-xs text-brand-on-surface-variant uppercase">
+                      Publicités Actives ({defaultAds.filter(a => a.isActive).length})
+                    </div>
+                    <div className="divide-y divide-brand-outline/10">
+                      {defaultAds.map((ad) => {
+                        const daysLeft = Math.ceil((new Date(ad.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                        return (
+                        <div key={ad.id} className="p-5 flex items-start justify-between hover:bg-brand-surface-low/50 transition-colors">
+                          <div className="flex-1">
+                            <h4 className="font-bold text-brand-on-surface">{ad.brand}</h4>
+                            <p className="text-sm text-brand-on-surface-variant mt-0.5">{ad.title}</p>
+                            <p className="text-xs text-brand-outline mt-1">{ad.subtitle}</p>
+                            <div className="flex gap-2 mt-3">
+                              <span className={`text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-wider ${
+                                ad.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                              }`}>
+                                {ad.isActive ? '✓ Actif' : 'Inactif'}
+                              </span>
+                              <span className={`text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-wider ${
+                                daysLeft > 7 ? 'bg-blue-100 text-blue-700' : daysLeft > 0 ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'
+                              }`}>
+                                {daysLeft > 0 ? `${daysLeft}j` : 'Expiré'}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-brand-on-surface-variant mt-2">
+                              Jusqu'au: {new Date(ad.endDate).toLocaleDateString('fr-FR')}
+                            </p>
+                          </div>
+                          <div className="flex gap-2 ml-4">
+                            <button className="p-2.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-all active:scale-95" title="Éditer">
+                              <Edit2 size={16} />
+                            </button>
+                            <button className="p-2.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-all active:scale-95" title="Supprimer">
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5 flex gap-3">
+                  <AlertCircle size={20} className="text-blue-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-bold text-blue-900 text-sm">Tarification & Gestion Publicités</p>
+                    <p className="text-xs text-blue-800 mt-1">• Forfait Mensuel: 50.000 FCFA pour 4 publicités<br/>• Publicité Supplémentaire: 15.000 FCFA chacune<br/>• Durée réglable: 1 à 365 jours<br/>• Affichage automatique sur tous les écrans clients<br/>• Défilement automatique chaque 5 secondes<br/>• Les pubs expirées disparaissent automatiquement</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
           </motion.div>
         </AnimatePresence>
       </main>
@@ -1608,6 +1781,14 @@ export const AdminDashboard: React.FC = () => {
         >
           <MessageSquare size={20} />
           <span className="text-[10px] font-black tracking-wide">Support</span>
+        </button>
+
+        <button 
+          onClick={() => setActiveTab('ads')}
+          className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'ads' ? 'text-brand-primary scale-105' : 'text-brand-on-surface-variant opacity-70'}`}
+        >
+          <Megaphone size={20} />
+          <span className="text-[10px] font-black tracking-wide">Pubs</span>
         </button>
 
         {!isAgent && (
